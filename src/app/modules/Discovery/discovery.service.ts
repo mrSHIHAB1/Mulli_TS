@@ -1,208 +1,176 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import mongoose from "mongoose";
+
 import User from "../user/user.model";
-import Swipe from "../Swipe/swipe.model";
-import AppError from "../../errorHelpers/AppError";
+import { calculateAge } from "../../utils/calculateAge";
 
-const COOLDOWN_HOURS = 24;
+interface Filters {
+  // Basic
+  gender?: string;
+  minAge?: number;
+  maxAge?: number;
+  minDistance?: number;
+  maxDistance?: number;
 
-const birthdateRangeFromAge = (minAge: number, maxAge: number) => {
+  // Premium
+  minPhotos?: number;
+  hasBio?: boolean;
+
+  minHeight?: number;
+  maxHeight?: number;
+
+  ethnicity?: string;
+  politics?: string;
+  religion?: string;
+
+  interests?: string[];
+  openTo?: string;
+  languages?: string[];
+}
+
+export const discoveryService = async (
+  authUser: any,
+  filters: Filters = {}
+) => {
+  if (!authUser?.id) throw new Error("Unauthorized");
+
+  //  Get logged-in user
+  const me = await User.findById(authUser.id);
+  if (!me) throw new Error("User not found");
+
+  if (!me.location?.coordinates?.length) return [];
+
   const today = new Date();
 
-  const maxBirthdate = new Date(today);
-  maxBirthdate.setFullYear(today.getFullYear() - minAge);
+  //  Age Filter
+  const ageFilter: any = {};
+  if (filters.minAge || filters.maxAge) {
+    ageFilter.birthdate = {};
 
-  const minBirthdate = new Date(today);
-  minBirthdate.setFullYear(today.getFullYear() - maxAge);
+    if (filters.minAge) {
+      const maxBirth = new Date();
+      maxBirth.setFullYear(today.getFullYear() - filters.minAge);
+      ageFilter.birthdate.$lte = maxBirth;
+    }
 
-  return { $gte: minBirthdate, $lte: maxBirthdate };
-};
-
-const sanitizeFilters = (filters: any = {}) => {
-  const cleaned: any = {};
-
-  if (filters.minAge !== undefined) cleaned.minAge = Number(filters.minAge);
-  if (filters.maxAge !== undefined) cleaned.maxAge = Number(filters.maxAge);
-  if (filters.distance !== undefined)
-    cleaned.distance = Number(filters.distance);
-
-  if (filters.skillLevels !== undefined) {
-    cleaned.skillLevels = Array.isArray(filters.skillLevels)
-      ? filters.skillLevels
-      : [];
+    if (filters.maxAge) {
+      const minBirth = new Date();
+      minBirth.setFullYear(today.getFullYear() - filters.maxAge);
+      ageFilter.birthdate.$gte = minBirth;
+    }
   }
 
-  if (
-    cleaned.minAge !== undefined &&
-    (cleaned.minAge < 18 || cleaned.minAge > 100)
-  ) {
-    throw new AppError(400, "minAge must be between 18 and 100");
-  }
-  if (
-    cleaned.maxAge !== undefined &&
-    (cleaned.maxAge < 18 || cleaned.maxAge > 100)
-  ) {
-    throw new AppError(400, "maxAge must be between 18 and 100");
-  }
-  if (
-    cleaned.minAge !== undefined &&
-    cleaned.maxAge !== undefined &&
-    cleaned.minAge > cleaned.maxAge
-  ) {
-    throw new AppError(400, "minAge cannot be greater than maxAge");
-  }
-
-  return cleaned;
-};
-
-const buildBaseQuery = async (userId: string) => {
-  const cutoff = new Date(Date.now() - COOLDOWN_HOURS * 60 * 60 * 1000);
-
-  const recentSwipes = await Swipe.find({
-    fromUser: userId,
-    createdAt: { $gte: cutoff },
-  }).select("toUser");
-
-  const swipedIds = recentSwipes.map((s: any) => s.toUser);
-
-  const dbQuery: any = {
-    _id: { $ne: userId, $nin: swipedIds },
+  //  Base Query
+  const query: any = {
+    _id: { $ne: me._id },
     isProfileComplete: true,
+    isDeleted: false,
+    isblocked: false,
+    ...ageFilter,
   };
 
-  return { dbQuery, cutoff };
-};
-
-const applyGenderPreference = (dbQuery: any, me: any) => {
-  if (me.genderPreference && me.genderPreference !== "Everyone") {
-    dbQuery.gender = me.genderPreference;
-  }
-};
-
-const applyFiltersToQuery = (dbQuery: any, me: any, filters: any) => {
-  const minAge = filters.minAge ?? 18;
-  const maxAge = filters.maxAge ?? 60;
-  dbQuery.birthdate = birthdateRangeFromAge(minAge, maxAge);
-
-  if (Array.isArray(filters.skillLevels) && filters.skillLevels.length > 0) {
-    dbQuery.skillLevel = { $in: filters.skillLevels };
+  //  Gender Logic
+  const genderToShow = filters.gender ?? me.genderPreference ?? "ALL";
+  if (genderToShow && genderToShow !== "ALL") {
+    query.gender = genderToShow;
   }
 
-  if (
-    typeof filters.distance === "number" &&
-    filters.distance > 0 &&
-    me.location
-  ) {
-    dbQuery.location = me.location;
-  }
-
-  return {
-    minAge,
-    maxAge,
-    distance: filters.distance ?? null,
-    skillLevels: filters.skillLevels ?? [],
+  //  Distance Setup
+  const geoNear: any = {
+    near: { type: "Point", coordinates: me.location.coordinates },
+    distanceField: "distance",
+    spherical: true,
   };
-};
 
-const fetchUsersByCursor = async (
-  dbQuery: any,
-  cursor: string | undefined,
-  limit: number
-) => {
-  if (cursor && mongoose.Types.ObjectId.isValid(cursor)) {
-    dbQuery._id.$lt = new mongoose.Types.ObjectId(cursor);
+  if (filters.minDistance)
+    geoNear.minDistance = filters.minDistance * 1000;
+
+  if (filters.maxDistance)
+    geoNear.maxDistance = filters.maxDistance * 1000;
+
+  // PREMIUM check
+  const isPremium = true;
+
+  if (isPremium) {
+    // Min Photos
+    if (filters.minPhotos) {
+  query.$expr = {
+    $gte: [
+      { $size: { $ifNull: ["$images", []] } },
+      filters.minPhotos,
+    ],
+  };
+}
+
+    //  Has Bio
+    if (filters.hasBio === true) {
+      query.bio = { $exists: true, $ne: "" };
+    }
+
+    // Height Range
+    if (filters.minHeight || filters.maxHeight) {
+      query.height = {};
+      if (filters.minHeight) query.height.$gte = filters.minHeight;
+      if (filters.maxHeight) query.height.$lte = filters.maxHeight;
+    }
+
+    // Simple Match Fields
+    if (filters.ethnicity) query.ethnicity = filters.ethnicity;
+    if (filters.politics) query.politics = filters.politics;
+    if (filters.religion) query.religion = filters.religion;
+    if (filters.openTo) query.openTo = filters.openTo;
+
+    // Array Match
+    if (filters.interests?.length) {
+      query.interests = { $in: filters.interests };
+    }
+
+    if (filters.languages?.length) {
+      query.languages = { $in: filters.languages };
+    }
   }
 
-  const users = await User.find(dbQuery)
-    .select(
-      "name birthdate gender location skillLevel playStyle profileImage images"
-    )
-    .sort({ _id: -1 })
-    .limit(limit);
+  // Aggregation Pipeline
+  const pipeline: any[] = [
+    { $geoNear: geoNear },
+    { $match: query },
+    {
+      $addFields: {
+        distanceKm: {
+          $round: [{ $divide: ["$distance", 1000] }, 1],
+        },
+      },
+    },
+    { $limit: 50 },
+    {
+      $project: {
+        password: 0,
+        email: 0,
+        phone: 0,
+        auth_providers: 0,
+        __v: 0,
+        createdAt: 0,
+        updatedAt: 0,
+      },
+    },
+  ];
 
-  const nextCursor = users.length ? String(users[users.length - 1]._id) : null;
+  const users = await User.aggregate(pipeline);
 
-  return { users, nextCursor };
+  // Transform Response
+  const transformed = users.map((u: any) => ({
+    id: u._id,
+    firstName: u.firstName,
+    lastName: u.lastName,
+    age: calculateAge(u.birthdate),
+    distanceKm: u.distanceKm,
+    profileImage: u.profileImage,
+    images: u.images,
+    skillLevel: u.skillLevel,
+    hopingToFind: u.hopingToFind,
+    gender: u.gender,
+    playstyle: u.playstyle,
+    height: u.height,
+    religion: u.religion,
+  }));
+
+  return transformed;
 };
-
-const getDiscoveryBatchService = async (authUser: any, query: any) => {
-  const userId = authUser.id;
-  if (!userId) throw new AppError(401, "Unauthorized");
-
-  const limit = Math.min(Math.max(parseInt(query.limit || "20", 10), 1), 50);
-  const cursor = query.cursor as string | undefined;
-  const filtered = query.filtered === "true";
-
-  const me = await User.findById(userId).select(
-    "genderPreference filters location isProfileComplete"
-  );
-  if (!me) throw new AppError(404, "User not found");
-
-  const { dbQuery, cutoff } = await buildBaseQuery(userId);
-
-  applyGenderPreference(dbQuery, me);
-
-  let appliedFilters: any = null;
-  if (filtered) {
-    const safe = sanitizeFilters((me as any).filters || {});
-    appliedFilters = applyFiltersToQuery(dbQuery, me, safe);
-  }
-
-  const { users, nextCursor } = await fetchUsersByCursor(dbQuery, cursor, limit);
-
-  return {
-    mode: filtered ? "saved_filters" : "gender_only",
-    cooldownHours: COOLDOWN_HOURS,
-    cooldownCutoff: cutoff,
-    limit,
-    cursor: cursor || null,
-    nextCursor,
-    hasMore: !!nextCursor,
-    users,
-    appliedFilters,
-  };
-};
-
-const getDiscoveryBatchWithCustomFiltersService = async (
-  authUser: any,
-  query: any,
-  body: any
-) => {
-  const userId = authUser.id;
-  if (!userId) throw new AppError(401, "Unauthorized");
-
-  const limit = Math.min(Math.max(parseInt(query.limit || "20", 10), 1), 50);
-  const cursor = query.cursor as string | undefined;
-
-  const me = await User.findById(userId).select(
-    "genderPreference location isProfileComplete"
-  );
-  if (!me) throw new AppError(404, "User not found");
-
-  const { dbQuery, cutoff } = await buildBaseQuery(userId);
-
-  applyGenderPreference(dbQuery, me);
-
-  const safeCustom = sanitizeFilters(body || {});
-  const appliedFilters = applyFiltersToQuery(dbQuery, me, safeCustom);
-
-  const { users, nextCursor } = await fetchUsersByCursor(dbQuery, cursor, limit);
-
-  return {
-    mode: "custom_filters",
-    cooldownHours: COOLDOWN_HOURS,
-    cooldownCutoff: cutoff,
-    limit,
-    cursor: cursor || null,
-    nextCursor,
-    hasMore: !!nextCursor,
-    users,
-    appliedFilters,
-  };
-};
-
-export const discoveryServices = {
-  getDiscoveryBatchService,
-  getDiscoveryBatchWithCustomFiltersService,
-};
-

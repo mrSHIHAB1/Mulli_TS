@@ -67,7 +67,7 @@ passport.use(
             email,
             name: profile.displayName,
             picture: profile.photos?.[0]?.value,
-            role: Role.DRIVER,
+            role: Role.USER,
             isVerified: true,
             auth_providers: [
               { provider: AuthProviderType.GOOGLE, providerID: profile.id },
@@ -146,7 +146,7 @@ passport.use(
           user = await User.create({
             email: email ?? undefined,
             name: fullName ?? "Apple User",
-            role: Role.DRIVER,
+            role: Role.USER,
             isVerified: true,
             auth_providers: [
               { provider: AuthProviderType.APPLE, providerID: appleId },

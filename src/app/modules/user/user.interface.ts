@@ -1,10 +1,12 @@
 // Core user-related TypeScript types & enums
 // Used across auth middleware, passport config, and user tokens
 
+import { Types } from "mongoose";
+
 export enum Role {
-  USER = "user",
-  ADMIN = "admin",
-  DRIVER = "driver",
+  USER = "USER",
+  ADMIN = "ADMIN",
+
 }
 
 export enum IsActive {
@@ -27,7 +29,7 @@ export interface IAuthProvider {
 // This should reflect the fields we actually use in services, auth, and passport.
 // It's intentionally permissive (many fields optional) to avoid blocking on strict typing.
 export interface IUser {
-  // Account / auth
+    _id?: Types.ObjectId;
   email?: string;
   phone?: string;
   password?: string;
@@ -75,6 +77,8 @@ export interface IUser {
   smoking?: string;
   images?: string[];
   prompt?: string[];
+  languages?: string[];
+  bio?: string;
   playstyle?: "Golf_Buddy" | "Golf_Date";
   location?: {
     type?: string;

@@ -16,6 +16,12 @@ interface APPLE_AUTH_TYPE {
   APPLE_CALLBACK_URL: string;
 }
 
+interface TWILIO_TYPE {
+  accountSid: string;
+  authToken: string;
+  phoneNumber: string;
+}
+
 interface EnvConfig {
   PORT: string;
   DB_URL: string;
@@ -57,6 +63,7 @@ interface EnvConfig {
    GOOGLE_AUTH: GOOGLE_TYPE;
   APPLE_AUTH: APPLE_AUTH_TYPE;
   FRONTEND_URL: string;
+   twilio: TWILIO_TYPE;
 }
 
 const loadEnvVariables = (): EnvConfig => {
@@ -86,7 +93,10 @@ const loadEnvVariables = (): EnvConfig => {
     "APPLE_KEY_ID",
     "APPLE_PRIVATE_KEY_PATH",
     "APPLE_CALLBACK_URL",
-    "FRONTEND_URL"
+    "FRONTEND_URL",
+        "TWILIO_ACCOUNT_SID",
+    "TWILIO_AUTH_TOKEN",
+    "TWILIO_PHONE_NUMBER",
   ];
 
   requiredEnvVariables.forEach((key) => {
@@ -146,6 +156,11 @@ const loadEnvVariables = (): EnvConfig => {
       APPLE_CALLBACK_URL: process.env.APPLE_CALLBACK_URL as string,
     },
     FRONTEND_URL: process.env.FRONTEND_URL as string,
+   twilio: {
+  accountSid: process.env.TWILIO_ACCOUNT_SID as string,
+  authToken: process.env.TWILIO_AUTH_TOKEN as string,
+  phoneNumber: process.env.TWILIO_PHONE_NUMBER as string,
+},
   };
 };
 

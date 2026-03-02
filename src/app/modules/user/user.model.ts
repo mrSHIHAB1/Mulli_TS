@@ -1,9 +1,10 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 import { AuthProviderType, IsActive, IUser, Role } from "./user.interface";
 
-export interface IUserDocument extends IUser, Document {}
 
-const UserSchema: Schema<IUserDocument> = new Schema(
+
+
+const UserSchema: Schema<IUser> = new Schema(
   {
     // Account
     phone: { type: String },
@@ -91,14 +92,16 @@ const UserSchema: Schema<IUserDocument> = new Schema(
     reciveNotifications: { type: Boolean, default: true },
     profileImage: { type: String },
     enableFaceId: { type: Boolean, default: false },
-    coins: { type: Number, default: 0 },
+    bio: { type: String },
+    languages: [{ type: String }],
+
   },
   { timestamps: true }
 );
 
 UserSchema.index({ location: "2dsphere" });
 
-export const User: Model<IUserDocument> = mongoose.model<IUserDocument>(
+export const User: Model<IUser> = mongoose.model<IUser>(
   "User",
   UserSchema
 );

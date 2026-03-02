@@ -31,7 +31,7 @@ const moduleRoutes = [
     route: swipeRouter,
   },
   {
-    path: "/liked",
+    path: "/match",
     route: matchRoutes,
   },
 ];
