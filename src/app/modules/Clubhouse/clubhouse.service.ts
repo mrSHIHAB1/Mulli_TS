@@ -2,6 +2,26 @@
 import mongoose from "mongoose";
 import { Post, Comment } from "./clubhouse.model";
 
+const getReplies = async (commentId: string): Promise<any[]> => {
+  const replies = await Comment.find({ parentId: commentId })
+    .populate("user", "name profileImage skillLevel")
+    .sort({ createdAt: 1 });
+
+  const nestedReplies = await Promise.all(
+    replies.map(async (reply) => {
+      const children = await getReplies(reply._id.toString());
+
+      return {
+        ...reply.toJSON(),
+        replies: children,
+      };
+    })
+  );
+
+  return nestedReplies;
+};
+
+
 export const createPostService = async (
   data: any,
   userId: string
@@ -19,7 +39,7 @@ export const createPostService = async (
 
 export const getHomeFeedService = async (): Promise<any[]> => {
   const posts = await Post.find({ visibility: "public" })
-    .populate("author", "name profileImage")
+    .populate("author", "name profileImage skillLevel")
     .sort({ createdAt: -1 });
 
   return posts;
@@ -89,7 +109,7 @@ export const createCommentService = async (
     user: userId,
     post: postId,
     text,
-  
+
   });
 
   // Increment comment count in Post
@@ -101,15 +121,18 @@ export const createCommentService = async (
 };
 
 export const getCommentsByPostService = async (postId: string): Promise<any[]> => {
-  const result = await Comment.find({ post: postId, parentId: null })
+
+  const comments = await Comment.find({
+    post: postId,
+    parentId: null,
+  })
     .populate("user", "name profileImage skillLevel")
     .sort({ createdAt: -1 });
 
-  const commentsWithReplies = await Promise.all(
-    result.map(async (comment) => {
-      const replies = await Comment.find({ parentId: comment._id })
-    .populate("user", "name profileImage skillLevel")
-    .sort({ createdAt: 1 });
+  const result = await Promise.all(
+    comments.map(async (comment) => {
+      const replies = await getReplies(comment._id.toString());
+
       return {
         ...comment.toJSON(),
         replies,
@@ -117,16 +140,16 @@ export const getCommentsByPostService = async (postId: string): Promise<any[]> =
     })
   );
 
-  return commentsWithReplies;
+  return result;
 };
 
-export const  likeCommentService = async (
+export const likeCommentService = async (
   userId: string,
   commentId: string
 ): Promise<any> => {
-  
+
   const comment = await Comment.findById(commentId);
-  
+
   if (!comment) {
     throw new Error("Comment not found");
   }
@@ -143,7 +166,7 @@ export const  likeCommentService = async (
         $inc: { likesCount: -1 },
       },
       { new: true }
-    ).populate("user", "name profileImage"); 
+    ).populate("user", "name profileImage");
   } else {
 
     updatedComment = await Comment.findByIdAndUpdate(
@@ -180,6 +203,79 @@ export const sendGiftService = async (
 
   return updated;
 };
+export const replyToCommentService = async (
+  userId: string,
+  commentId: string,
+  payload: any
+): Promise<any> => {
+  const { text } = payload;
+  const parentComment = await Comment.findById(commentId);
+  if (!parentComment) {
+    throw new Error("Parent comment not found");
+  }
+  const reply = await Comment.create({
+    user: userId,
+    post: parentComment.post,
+    text,
+    parentId: parentComment._id,
+  });
+  await Comment.findByIdAndUpdate(commentId, {
+    $inc: { replyCount: 1 },
+  });
+  return reply;
+};
+
+export const deletePostService = async (
+  postId: string,
+  userId: string
+): Promise<any> => {
+  const post = await Post.findById(postId);
+  if (!post) {
+    throw new Error("Post not found");
+  }
+
+  if (post.author.toString() !== userId) {
+    throw new Error("You are not authorized to delete this post");
+  }
+
+  // Delete all comments associated with the post
+  await Comment.deleteMany({ post: postId });
+
+  const result = await Post.findByIdAndDelete(postId);
+  return result;
+};
+
+export const deleteCommentService = async (
+  commentId: string,
+  userId: string
+): Promise<any> => {
+  const comment = await Comment.findById(commentId);
+  if (!comment) {
+    throw new Error("Comment not found");
+  }
+
+  if (comment.user.toString() !== userId) {
+    throw new Error("You are not authorized to delete this comment");
+  }
+
+  // If it's a reply, decrement replyCount of parent
+  if (comment.parentId) {
+    await Comment.findByIdAndUpdate(comment.parentId, {
+      $inc: { replyCount: -1 },
+    });
+  } else {
+    // If it's a top-level comment, decrement commentsCount of post
+    await Post.findByIdAndUpdate(comment.post, {
+      $inc: { commentsCount: -1 },
+    });
+  }
+
+  // Delete all replies if any
+  await Comment.deleteMany({ parentId: commentId });
+
+  const result = await Comment.findByIdAndDelete(commentId);
+  return result;
+};
 
 export const postServices = {
   createPostService,
@@ -189,5 +285,8 @@ export const postServices = {
   createCommentService,
   getCommentsByPostService,
   likeCommentService,
+  replyToCommentService,
+  deletePostService,
+  deleteCommentService
 };
 

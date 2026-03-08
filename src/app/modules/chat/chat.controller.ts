@@ -60,7 +60,7 @@ const getMessages = catchAsync(async (req: Request, res: Response) => {
 
 
 export const ChatController = {
-  sendMessage, 
+  sendMessage,
   getConversations,
   getMessages,
 

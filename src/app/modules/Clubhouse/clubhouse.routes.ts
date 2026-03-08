@@ -21,5 +21,11 @@ router.post("/comment/:postId", checkAuth(...Object.values(Role)), postControlle
 router.get("/comment/:postId", postController.getComments);
 router.post("/comment/like/:commentId", checkAuth(...Object.values(Role)), postController.likeComment);
 
+router.post("/comments/reply/:commentId", checkAuth(...Object.values(Role)), postController.replyToComment);
+
+// Delete Routes
+router.delete("/posts/:id", checkAuth(...Object.values(Role)), postController.deletePost);
+router.delete("/comment/:id", checkAuth(...Object.values(Role)), postController.deleteComment);
+
 export const clubhouseRoutes = router;
 

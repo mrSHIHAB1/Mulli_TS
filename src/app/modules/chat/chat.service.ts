@@ -13,7 +13,7 @@ const sendMessageService = async (
   receiverId: string,
   payload: Partial<IMessage>,
 ) => {
-  const senderId = user.userId || user.id;
+  const senderId = user.userId || user.id;  
 
   // Block sending message to self
   if (String(senderId) === String(receiverId)) {
@@ -29,17 +29,6 @@ const sendMessageService = async (
   if (!senderUser) throw new AppError(401, "Invalid sender");
   if (!receiverUser) throw new AppError(404, "Receiver not found");
 
-  const senderRole = String((senderUser as any).role || "USER");
-  const receiverRole = String((receiverUser as any).role || "USER");
-
-  /**
-   * ✅ Core rule:
-   * - USER can message only ADMIN
-   * - ADMIN can message anyone
-   */
-  if (senderRole !== "ADMIN" && receiverRole !== "ADMIN") {
-    throw new AppError(403, "Users can only message admin");
-  }
 
   // Create message document
   const messageDoc = await Message.create({
@@ -70,7 +59,7 @@ const sendMessageService = async (
 
 const getConversationsService = async (user: JwtPayload) => {
   const userId = new Types.ObjectId(user.userId || user.id);
-
+console.log("User ID in getConversationsService:", userId);
   const conversations = await Message.aggregate([
     {
       $match: {

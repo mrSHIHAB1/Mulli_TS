@@ -28,7 +28,7 @@ const clubhouseSchema = new Schema<IClubhouseDocument>(
     postType: {
       type: String,
       enum: Object.values(PostType),
-      required: true,
+
     },
     playDetails: {
       golfCourse: String,
@@ -37,18 +37,20 @@ const clubhouseSchema = new Schema<IClubhouseDocument>(
       flexibleLocation: { type: Boolean, default: false },
       date: Date,
       time: String,
+      flexibledate: { type: Boolean, default: false },
       playersNeeded: Number,
-      playStyle: {
-        type: String,
-        enum: Object.values(PlayStyle),
-      },
-      tees:{ type: String },
-      yardage:{ type: Number },
       handicapRange: {
         lowest: { type: Number },
         highest: { type: Number }
       },
-       flexibledate: { type: Boolean, default: false },
+      playStyle: {
+        type: String,
+        enum: Object.values(PlayStyle),
+      },
+      tees: { type: String },
+      yardage: { type: Number },
+
+
       mobility: {
         type: String,
         enum: Object.values(Mobility),
@@ -66,6 +68,8 @@ const clubhouseSchema = new Schema<IClubhouseDocument>(
         enum: Object.values(PostRoundInterest),
       },
       notes: String,
+      gimimies: { type: Boolean, default: false },
+      Mulligans: { type: Boolean, default: false },
     },
     visibility: {
       type: String,

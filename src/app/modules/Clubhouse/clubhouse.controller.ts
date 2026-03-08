@@ -7,13 +7,11 @@ import { postServices } from "./clubhouse.service";
 
 /* ================= CREATE POST ================= */
 const createPost = catchAsync(async (req: Request, res: Response) => {
-  // In production, req.user should be set by auth middleware
-  const currentUser: any = (req as any).user;
-  if (!currentUser?.id) {
-    throw new Error("Authenticated user required to create a post");
-  }
 
-  // 1️⃣ Parse JSON from 'data' field
+  const currentUser: any = (req as any).user;
+
+
+
   let postData: any = {};
   if (req.body.data) {
     try {
@@ -25,7 +23,7 @@ const createPost = catchAsync(async (req: Request, res: Response) => {
     postData = req.body;
   }
 
-  // 2️⃣ Upload files to Cloudinary if any
+
   const uploadedMedia: { url: string; type: string }[] = [];
   const files = req.files as Express.Multer.File[] | undefined;
 
@@ -45,7 +43,7 @@ const createPost = catchAsync(async (req: Request, res: Response) => {
     postData.media = uploadedMedia;
   }
 
-  // 3️⃣ Create post
+
   const result = await postServices.createPostService(postData, currentUser.id);
 
   sendResponse(res, {
@@ -166,6 +164,54 @@ const sendGift = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const replyToComment = catchAsync(async (req: Request, res: Response) => {
+  const currentUser: any = (req as any).user;
+
+
+  const { commentId } = req.params;
+
+  const result = await postServices.replyToCommentService(
+    currentUser.id,
+    commentId as string,
+    req.body
+  );
+
+  sendResponse(res, {
+    success: true,
+    statusCode: 201,
+    message: "Reply added successfully!",
+    data: result,
+  });
+});
+
+const deletePost = catchAsync(async (req: Request, res: Response) => {
+  const currentUser: any = (req as any).user;
+  const { id } = req.params;
+
+  const result = await postServices.deletePostService(id as string, currentUser.id);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "Post deleted successfully!",
+    data: result,
+  });
+});
+
+const deleteComment = catchAsync(async (req: Request, res: Response) => {
+  const currentUser: any = (req as any).user;
+  const { id } = req.params;
+
+  const result = await postServices.deleteCommentService(id as string, currentUser.id);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "Comment deleted successfully!",
+    data: result,
+  });
+});
+
 export const postController = {
   createPost,
   getHomeFeed,
@@ -174,5 +220,8 @@ export const postController = {
   createComment,
   getComments,
   likeComment,
+  replyToComment,
+  deletePost,
+  deleteComment
 };
 
