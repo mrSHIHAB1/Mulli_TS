@@ -45,9 +45,9 @@ export enum Visibility {
 }
 
 export enum MediaType {
-  IMAGE = "IMAGE",
-  VIDEO = "VIDEO",
-  GIF = "GIF",
+  IMAGE = "image",
+  VIDEO = "video",
+  GIF = "gif",
 }
 export enum VibeType {
   MUSIC = "MUSIC",
@@ -104,10 +104,7 @@ export interface IClubhouse {
   playDetails?: IPlayDetails;
   visibility: Visibility;
   whatsOnYourMind?: string;
-  media: {
-    type: MediaType;
-    url: string;
-  }[];
+  media: string[];
   likes: Types.ObjectId[];
   likesCount: number;
   commentsCount: number;

@@ -38,7 +38,7 @@ export const createPostService = async (
 };
 
 export const getHomeFeedService = async (): Promise<any[]> => {
-  const posts = await Post.find({ visibility: "public" })
+  const posts = await Post.find()
     .populate("author", "name profileImage skillLevel")
     .sort({ createdAt: -1 });
 

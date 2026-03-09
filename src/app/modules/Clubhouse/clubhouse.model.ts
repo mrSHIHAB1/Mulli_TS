@@ -77,15 +77,7 @@ const clubhouseSchema = new Schema<IClubhouseDocument>(
       default: Visibility.PUBLIC,
     },
     whatsOnYourMind: { type: String, trim: true },
-    media: [
-      {
-        type: {
-          type: String,
-          enum: Object.values(MediaType)
-        },
-        url: { type: String, required: true },
-      },
-    ],
+    media: [String],
     backgroundColor: String,
     likes: [{ type: Schema.Types.ObjectId, ref: "User" }],
     likesCount: { type: Number, default: 0 },

@@ -24,17 +24,14 @@ const createPost = catchAsync(async (req: Request, res: Response) => {
   }
 
 
-  const uploadedMedia: { url: string; type: string }[] = [];
+  const uploadedMedia: string[] = [];
   const files = req.files as Express.Multer.File[] | undefined;
 
   if (files && files.length > 0) {
     for (const file of files) {
       const uploadResult: any = await fileUploader.uploadToCloudinary(file);
       if (uploadResult) {
-        uploadedMedia.push({
-          url: uploadResult.secure_url,
-          type: file.mimetype.startsWith("video/") ? "video" : "image",
-        });
+        uploadedMedia.push(uploadResult.secure_url);
       }
     }
   }
