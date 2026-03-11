@@ -39,7 +39,7 @@ export const createPostService = async (
 
 export const getHomeFeedService = async (): Promise<any[]> => {
   const posts = await Post.find()
-    .populate("author", "name profileImage skillLevel")
+    .populate("author", "firstName lastName profileImage skillLevel")
     .sort({ createdAt: -1 });
 
   return posts;

@@ -7,6 +7,8 @@ import { NotificationService } from "../notification/notification.service";
 import { Types } from "mongoose";
 import AppError from "../../errorHelpers/AppError";
 import { Message } from "./chat.model";
+import { formatChatTime } from "../../utils/timeFormatter";
+import { fileUploader } from "../../helpers/fileUpload";
 
 const sendMessageService = async (
   user: JwtPayload,
@@ -36,7 +38,7 @@ const sendMessageService = async (
     receiver: new Types.ObjectId(receiverId),
     message: {
       text: payload.message?.text || "",
-      image: payload.message?.image || "",
+       media: payload.message?.media || [], 
     },
     status: payload.status || MessageStatus.SENT,
     replyTo: payload.replyTo,
@@ -109,7 +111,8 @@ const getConversationsService = async (user: JwtPayload) => {
         _id: 0,
         user: {
           _id: 1,
-          full_name: 1,
+          firstName: 1,
+          lastName: 1,
           email: 1,
           profileImage: 1,
         },
@@ -121,8 +124,17 @@ const getConversationsService = async (user: JwtPayload) => {
       $sort: { "lastMessage.createdAt": -1 },
     },
   ]);
+  const formattedConversations = conversations.map((conv) => ({
+    ...conv,
+    lastMessage: {
+      ...conv.lastMessage,
+      timeLabel: formatChatTime(conv.lastMessage.createdAt),
+    },
+  }));
 
-  return conversations;
+  return formattedConversations;
+
+  
 };
 
 const getMessagesService = async (user: JwtPayload, otherUserId: string) => {
@@ -144,9 +156,48 @@ const getMessagesService = async (user: JwtPayload, otherUserId: string) => {
 
   return messages;
 };
+const deleteMessageService = async (user: JwtPayload, messageId: string) => {
+  const senderId = user.userId || user.id;
 
+  const message = await Message.findById(messageId);
+
+  if (!message) throw new AppError(404, "Message not found");
+
+  if (String(message.sender) !== String(senderId)) {
+    throw new AppError(403, "You can only delete your own messages");
+  }
+
+  // Delete all media from Cloudinary
+  if (message.message?.media && message.message.media.length > 0) {
+    await Promise.all(
+      message.message.media.map(async (item) => {
+        // Extracts "folder/filename" from full cloudinary URL
+        const matches = item.url.match(/upload\/(?:v\d+\/)?(.+)\.[a-zA-Z0-9]+$/);
+        const publicId = matches ? matches[1] : "";
+
+        if (publicId) {
+          const resourceType = item.type === "image" ? "image" : "video"; // cloudinary uses "video" for audio too
+          await fileUploader.deleteFromCloudinary(publicId, resourceType);
+        }
+      })
+    );
+  }
+
+  // Hard delete from DB
+  await Message.findByIdAndDelete(messageId);
+
+  // Notify receiver in real-time
+  const io = getIo();
+  io.to(String(message.receiver)).emit("message_deleted", { messageId });
+
+  return { messageId };
+};
+
+// Add to exports
 export const chatService = {
   sendMessageService,
   getConversationsService,
   getMessagesService,
+  deleteMessageService, // ← add
 };
+

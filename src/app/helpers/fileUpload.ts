@@ -70,9 +70,31 @@ const deleteFromCloudinary = async (
     return null;
   }
 };
+const uploadManyToCloudinary = async (
+  files: Express.Multer.File[],
+): Promise<{ url: string; type: 'image' | 'video' | 'audio' }[]> => {
+  const results = await Promise.all(
+    files.map(async (file) => {
+      const uploaded = await uploadToCloudinary(file);
 
+      // Determine friendly type for frontend
+      let type: 'image' | 'video' | 'audio' = 'image';
+      if (file.mimetype.startsWith('video/')) type = 'video';
+      else if (file.mimetype.startsWith('audio/')) type = 'audio';
+
+      return {
+        url: uploaded?.secure_url || '',
+        type,
+      };
+    }),
+  );
+
+  // Filter out any failed uploads
+  return results.filter((r) => r.url !== '');
+};
 export const fileUploader = {
   upload,
   uploadToCloudinary,
-  deleteFromCloudinary
+  deleteFromCloudinary,
+  uploadManyToCloudinary
 };

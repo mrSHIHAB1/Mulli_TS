@@ -8,45 +8,33 @@ import { fileUploader } from "../../helpers/fileUpload";
 import { StatusCodes } from "http-status-codes";
 import { sendResponse } from "../../utils/sendResponse";
 
-const sendMessage = catchAsync(
-  async (req: Request, res: Response, next: NextFunction) => {
-    const { receiverId } = req.params;
-    const user = req.user as JwtPayload;
+const sendMessage = catchAsync(async (req: Request, res: Response) => {
+  const { receiverId } = req.params as { receiverId: string };
+  const user = req.user as JwtPayload;
+  const files = req.files as Express.Multer.File[] | undefined;
 
-    const files = req.files as Express.Multer.File[] | undefined;
-    let imageUrl = "";
+  // Upload all files at once, order preserved
+  const media = files?.length
+    ? await fileUploader.uploadManyToCloudinary(files)
+    : [];
 
-    if (files && files.length > 0) {
-      const uploadResult = await fileUploader.uploadToCloudinary(files[0]);
-      if (uploadResult) {
-        imageUrl = uploadResult.secure_url;
-      }
-    }
+  const messageData = {
+    ...req.body,
+    message: {
+      text: req.body.message?.text || req.body.text || "",
+      media,
+    },
+  };
 
-    const messageData = {
-      ...req.body,
-      message: {
-        ...req.body.message,
-        image: imageUrl,
-      },
-    };
+  const result = await chatService.sendMessageService(user, receiverId, messageData);
 
-    const result = await chatService.sendMessageService(
-      user,
-      receiverId as string,
-      messageData,
-    );
-
-    // send response
-    sendResponse(res, {
-      success: true,
-      statusCode: StatusCodes.OK,
-      message: "Message sent successfully!",
-      data: result,
-    });
-  },
-);
-
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: "Message sent successfully!",
+    data: result,
+  });
+});
 const getConversations = catchAsync(async (req: Request, res: Response) => {
   const user = req.user as JwtPayload;
 
@@ -77,10 +65,26 @@ const getMessages = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const deleteMessage = catchAsync(async (req: Request, res: Response) => {
+  const { messageId } = req.params;
+  const user = req.user as JwtPayload;
+
+  const result = await chatService.deleteMessageService(user, messageId as string);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: "Message deleted successfully!",
+    data: result,
+  });
+});
+
+// Add to exports
 
 export const ChatController = {
   sendMessage,
   getConversations,
   getMessages,
+  deleteMessage
 
 };

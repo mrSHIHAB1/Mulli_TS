@@ -9,7 +9,7 @@ const router = Router();
 
 router.post(
   "/send_message/:receiverId",
-  fileUploader.upload.array("image", 5),
+  fileUploader.upload.array("media", 10),
   checkAuth(...Object.values(Role)),
   ChatController.sendMessage,
 );
@@ -25,6 +25,6 @@ router.get(
   checkAuth(...Object.values(Role)),
   ChatController.getMessages,
 );
-
+router.delete("/message/:messageId", checkAuth(...Object.values(Role)), ChatController.deleteMessage);
 
 export const chatRoutes = router;
