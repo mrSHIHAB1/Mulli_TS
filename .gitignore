@@ -7,3 +7,4 @@ uploads/*
 !uploads/.gitkeep
 *.log
 keys/
+keys/*.json
