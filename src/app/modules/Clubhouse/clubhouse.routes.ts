@@ -3,6 +3,7 @@ import { postController } from "./clubhouse.controller";
 import { fileUploader } from "../../helpers/fileUpload";
 import { checkAuth } from "../../middlewares/checkAuth";
 import { Role } from "../user/user.interface";
+import { check } from "zod";
 
 const router = Router();
 
@@ -26,6 +27,7 @@ router.post("/comments/reply/:commentId", checkAuth(...Object.values(Role)), pos
 // Delete Routes
 router.delete("/posts/:id", checkAuth(...Object.values(Role)), postController.deletePost);
 router.delete("/comment/:id", checkAuth(...Object.values(Role)), postController.deleteComment);
+router.post("/report/:postId",checkAuth(...Object.values(Role)), postController.reportPost);
 
 export const clubhouseRoutes = router;
 

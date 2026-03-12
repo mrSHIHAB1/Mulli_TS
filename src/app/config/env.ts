@@ -64,6 +64,7 @@ interface EnvConfig {
   APPLE_AUTH: APPLE_AUTH_TYPE;
   FRONTEND_URL: string;
    twilio: TWILIO_TYPE;
+   FIREBASE_SERVICE_ACCOUNT_PATH: string;
 }
 
 const loadEnvVariables = (): EnvConfig => {
@@ -97,6 +98,7 @@ const loadEnvVariables = (): EnvConfig => {
         "TWILIO_ACCOUNT_SID",
     "TWILIO_AUTH_TOKEN",
     "TWILIO_PHONE_NUMBER",
+    "FIREBASE_SERVICE_ACCOUNT_PATH"
   ];
 
   requiredEnvVariables.forEach((key) => {
@@ -161,6 +163,7 @@ const loadEnvVariables = (): EnvConfig => {
   authToken: process.env.TWILIO_AUTH_TOKEN as string,
   phoneNumber: process.env.TWILIO_PHONE_NUMBER as string,
 },
+   FIREBASE_SERVICE_ACCOUNT_PATH:process.env.FIREBASE_SERVICE_ACCOUNT_PATH as string,
   };
 };
 

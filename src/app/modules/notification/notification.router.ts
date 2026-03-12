@@ -25,13 +25,8 @@ router.patch(
 router.delete(
   "/delete/:id",
   checkAuth(...Object.values(Role)),
-  NotificationController.deleteNotificationController,
+  NotificationController.deleteNotificationController,  
 );
 
-router.get(
-  "/all",
-  checkAuth(Role.ADMIN), // only admin roles
-  NotificationController.getAllNotifications,
-);
 
 export const notificationRoutes = router;

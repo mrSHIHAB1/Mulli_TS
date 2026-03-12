@@ -209,6 +209,26 @@ const deleteComment = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const reportPost = catchAsync(async (req: Request, res: Response) => {
+  const currentUser: any = (req as any).user;
+  const { postId } = req.params;
+  const { type } = req.body;
+
+
+
+  const reports = await postServices.reportPostService(
+   postId as string,
+    currentUser.id,
+    type
+  );
+
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "Post reported successfully",
+    data: reports,
+  });
+});
 export const postController = {
   createPost,
   getHomeFeed,
@@ -219,6 +239,7 @@ export const postController = {
   likeComment,
   replyToComment,
   deletePost,
-  deleteComment
+  deleteComment,
+  reportPost 
 };
 

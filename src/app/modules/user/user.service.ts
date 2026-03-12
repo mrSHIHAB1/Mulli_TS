@@ -4,6 +4,7 @@ import { generateOtp } from "../../utils/otp.util";
 import { sendOtpEmail } from "../../utils/email.util";
 import { redisClient } from "../../config/redis.config";
 import { createUserTokens } from "../../utils/userTokens";
+import mongoose from "mongoose";
 
 const OTP_EXPIRE = 3 * 60; // 3 minutes
 
@@ -233,4 +234,60 @@ export const verifyPhoneOtp = async (
     };
   }
 };
+export const updateFcmToken = async (
+  userId: string,
+  fcmToken: string
+): Promise<any> => {
+  return User.findByIdAndUpdate(
+    userId,
+    { $addToSet: { fcmTokens: fcmToken } },
+    { new: true }
+  );
+};
+export const blockUserService = async (userId: string, blockedId: string) => {
+  if (userId === blockedId) throw new Error("Cannot block yourself");
 
+  const user = await User.findById(userId);
+  if (!user) throw new Error("User not found");
+
+  if (user.blockedUsers.includes(new mongoose.Types.ObjectId(blockedId))) {
+    throw new Error("User already blocked");
+  }
+
+  user.blockedUsers.push(new mongoose.Types.ObjectId(blockedId));
+  await user.save();
+  return user;
+};
+
+// Unblock a user
+export const unblockUserService = async (userId: string, blockedId: string) => {
+  const user = await User.findById(userId);
+  if (!user) throw new Error("User not found");
+
+  user.blockedUsers = user.blockedUsers.filter(
+    (id) => id.toString() !== blockedId
+  );
+  await user.save();
+  return user;
+};
+
+// Get blocked users list
+export const getBlockedUsersService = async (userId: string) => {
+  const user = await User.findById(userId).populate(
+    "blockedUsers",
+    "firstName lastName profileImage"
+  );
+  if (!user) throw new Error("User not found");
+
+  return user.blockedUsers;
+};
+
+// Check if a user is blocked
+export const isBlockedService = async (userId: string, otherUserId: string) => {
+  const user = await User.findById(userId);
+  if (!user) return false;
+
+  return user.blockedUsers.some(
+    (id) => id.toString() === otherUserId
+  );
+};

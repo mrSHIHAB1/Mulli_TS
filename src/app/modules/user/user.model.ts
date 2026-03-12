@@ -76,6 +76,7 @@ const UserSchema: Schema<IUser> = new Schema(
     },
 
     height: { type: Number, default: 0 },
+    fcmTokens: [{ type: String }],
     hasKids: { type: Boolean, default: false },
     wantsKids: { type: String, default: false },
     drinking: { type: String },
@@ -94,7 +95,7 @@ const UserSchema: Schema<IUser> = new Schema(
     enableFaceId: { type: Boolean, default: false },
     bio: { type: String },
     languages: [{ type: String }],
-
+    blockedUsers: [{ type: Schema.Types.ObjectId, ref: 'User' }]
   },
   { timestamps: true }
 );

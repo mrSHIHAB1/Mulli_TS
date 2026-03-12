@@ -3,9 +3,13 @@ import http from "http";
 import app from "./app";
 import { envVars } from "./app/config/env";
 import { connectRedis } from "./app/config/redis.config";
+import { initFirebase } from "./app/config/firebase.config";
 import { setIo } from "./app/modules/socket/socket.store";
 import { initSockets } from "./app/modules/socket/socket";
 import { Server as SocketIoServer } from "socket.io";
+
+initFirebase();
+
 
 let server: http.Server;
 

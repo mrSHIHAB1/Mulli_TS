@@ -10,8 +10,10 @@ import {
   Visibility,
   MediaType,
   ICommentDocument,
-  VibeType
+  VibeType,
+  ReportType
 } from "./clubhouse.interface ";
+import { report } from "process";
 
 const clubhouseSchema = new Schema<IClubhouseDocument>(
   {
@@ -89,6 +91,13 @@ const clubhouseSchema = new Schema<IClubhouseDocument>(
         sentAt: { type: Date, default: Date.now },
       },
     ],
+   reports: [
+  {
+    user: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    type: { type: String, enum: Object.values(ReportType), required: true },
+    reportedAt: { type: Date, default: Date.now },
+  }
+],
   },
   {
     timestamps: true,

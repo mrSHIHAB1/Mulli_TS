@@ -56,7 +56,14 @@ export enum VibeType {
   MULLIGANS = "MULLIGANS",
   GIMMIES = "GIMMIES",
 }
-
+export enum ReportType {
+  FAKE_PROFILE = "FAKE_PROFILE",
+  INAPPROPRIATE = "INAPPROPRIATE",
+  SCAM = "SCAM",
+  HATE = "HATE",
+  UNDERAGE= "UNDERAGE",
+  NOT_INTERESTED = "NOT_INTERESTED",
+}
 // --- SUB-INTERFACES ---
 export interface IVibe {
   music?: boolean;
@@ -95,7 +102,12 @@ export interface ICommentDocument extends IComment, Document {
   createdAt: Date;
   updatedAt: Date;
 }
-
+export interface IReport {
+ 
+  user: Types.ObjectId;
+  type: ReportType;
+  reportedAt: Date;
+}
 // --- MAIN INTERFACE ---
 export interface IClubhouse {
   author: Types.ObjectId;
@@ -114,6 +126,7 @@ export interface IClubhouse {
     sentAt: Date;
   }[];
   backgroundColor?: string;
+  reports: IReport[];
 }
 
 export interface IClubhouseDocument extends IClubhouse, Document {

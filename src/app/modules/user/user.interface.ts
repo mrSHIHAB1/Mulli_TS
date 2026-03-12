@@ -50,7 +50,7 @@ export interface IUser {
   name?: string;
   firstName?: string;
   lastName?: string;
-
+    fcmTokens?: string[] ,
   // Misc fields used by the new dating/golf profile
   birthdate?: Date;
   trackactivity?: "Once" | "While_Using" | "No";
@@ -89,6 +89,7 @@ export interface IUser {
   reciveNotifications?: boolean;
   profileImage?: string;
   enableFaceId?: boolean;
+  blockedUsers: Types.ObjectId[];
   coins?: number;
 }
 

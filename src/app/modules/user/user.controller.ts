@@ -218,10 +218,76 @@ const verifyPhoneOtp = async (req: Request, res: Response): Promise<void> => {
 
 
 
+const updateFcmToken = catchAsync(async (req: Request, res: Response) => {
+  const { fcmToken } = req.body;
+  const user = (req as any).user; // Assuming auth middleware attaches user
+
+  if (!fcmToken) {
+    return sendResponse(res, {
+      statusCode: 400,
+      success: false,
+      message: "FCM token is required",
+      data: null,
+    });
+  }
+
+  const result = await userService.updateFcmToken(user?._id || req.body.userId, fcmToken);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "FCM token updated successfully",
+    data: result,
+  });
+});
+
+export const blockUser = catchAsync(async (req: Request, res: Response) => {
+  const currentUser: any = (req as any).user;
+  const { blockedId } = req.body;
+
+  const result = await userService.blockUserService(currentUser.id, blockedId);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "User blocked successfully",
+    data: result.blockedUsers,
+  });
+});
+
+export const unblockUser = catchAsync(async (req: Request, res: Response) => {
+  const currentUser: any = (req as any).user;
+  const { blockedId } = req.body;
+
+  const result = await userService.unblockUserService(currentUser.id, blockedId);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "User unblocked successfully",
+    data: result.blockedUsers,
+  });
+});
+
+export const getBlockedUsers = catchAsync(async (req: Request, res: Response) => {
+  const currentUser: any = (req as any).user;
+
+  const result = await userService.getBlockedUsersService(currentUser.id);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "Blocked users fetched successfully",
+    data: result,
+  });
+});
+
 export const userControllers = {
   createUser,
   sendEmailOtp,
   verifyEmailOtp,
   sendPhoneOtp,
   verifyPhoneOtp,
+  updateFcmToken,
 };
+

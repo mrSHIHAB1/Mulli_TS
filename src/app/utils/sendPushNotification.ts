@@ -1,28 +1,33 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { fcmMessaging } from "../config/firebase.config";
 
-// Firebase / FCM is not used in this project anymore.
-// This helper is kept as a no-op so callers don't crash.
+const toStringMap = (data?: Record<string, any>) => {
+  const out: Record<string, string> = {};
+  if (!data) return out;
+  for (const k of Object.keys(data)) {
+    const v = data[k];
+    out[k] = typeof v === "string" ? v : JSON.stringify(v);
+  }
+  return out;
+};
 
 export const sendPushToTokens = async (
   tokens: string[],
   title: string,
   body: string,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   data?: Record<string, any>,
 ) => {
-  if (!tokens?.length) {
-    return { successCount: 0, failureCount: 0, responses: [] as any[] };
-  }
+  if (!tokens?.length) return { successCount: 0, failureCount: 0 };
 
-  console.log("sendPushToTokens called (push disabled):", {
-    tokensCount: tokens.length,
-    title,
-    body,
+  const res = await fcmMessaging().sendEachForMulticast({
+    tokens,
+    notification: { title, body },
+    data: toStringMap(data),
   });
 
   return {
-    successCount: 0,
-    failureCount: tokens.length,
-    responses: [] as any[],
+    successCount: res.successCount,
+    failureCount: res.failureCount,
+    responses: res.responses,
   };
 };

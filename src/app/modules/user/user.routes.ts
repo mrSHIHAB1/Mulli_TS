@@ -1,6 +1,9 @@
 import { Router } from "express";
 import { fileUploader } from "../../helpers/fileUpload";
-import { userControllers } from "./user.controller";
+import { blockUser, getBlockedUsers, unblockUser, userControllers } from "./user.controller";
+
+import { checkAuth } from "../../middlewares/checkAuth";
+import { Role } from "./user.interface";
 
 const router = Router();
 
@@ -19,5 +22,14 @@ router.patch(
   userControllers.createUser
 );
 
+router.patch(
+  "/update-fcm-token",
+  checkAuth(Role.USER, Role.ADMIN),
+  userControllers.updateFcmToken
+);
+router.post("/block", blockUser);      // Block a user
+router.post("/unblock", unblockUser);  // Unblock a user
+router.get("/blocked", getBlockedUsers); // List blocked users
 export const userRoutes = router;
+
 

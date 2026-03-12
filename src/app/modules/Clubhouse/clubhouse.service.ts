@@ -1,10 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import mongoose from "mongoose";
 import { Post, Comment } from "./clubhouse.model";
+import { ReportType } from "./clubhouse.interface ";
 
 const getReplies = async (commentId: string): Promise<any[]> => {
   const replies = await Comment.find({ parentId: commentId })
-    .populate("user", "name profileImage skillLevel")
+    .populate("user", "firstName lastName profileImage skillLevel")
     .sort({ createdAt: 1 });
 
   const nestedReplies = await Promise.all(
@@ -39,6 +40,7 @@ export const createPostService = async (
 
 export const getHomeFeedService = async (): Promise<any[]> => {
   const posts = await Post.find()
+    .select("-reports")
     .populate("author", "firstName lastName profileImage skillLevel")
     .sort({ createdAt: -1 });
 
@@ -126,7 +128,7 @@ export const getCommentsByPostService = async (postId: string): Promise<any[]> =
     post: postId,
     parentId: null,
   })
-    .populate("user", "name profileImage skillLevel")
+    .populate("user", "firstName lastName profileImage skillLevel")
     .sort({ createdAt: -1 });
 
   const result = await Promise.all(
@@ -277,6 +279,35 @@ export const deleteCommentService = async (
   return result;
 };
 
+export const reportPostService = async (
+  postId: string,
+  userId: string,
+  type: ReportType
+): Promise<any> => {
+  const post = await Post.findById(postId);
+  if (!post) {
+    throw new Error("Post not found");
+  }
+
+  // Prevent duplicate report by same user
+  const alreadyReported = post.reports.some(
+    (r) => r.user.toString() === userId && r.type === type
+  );
+  if (alreadyReported) {
+    throw new Error("You have already reported this post with this type");
+  }
+const userObjectId = new mongoose.Types.ObjectId(userId);
+  // Add report
+  post.reports.push({
+    user: userObjectId,
+    type,
+    reportedAt: new Date(),
+  });
+
+  await post.save();
+
+  return post.reports;
+};
 export const postServices = {
   createPostService,
   getHomeFeedService,
@@ -287,6 +318,7 @@ export const postServices = {
   likeCommentService,
   replyToCommentService,
   deletePostService,
-  deleteCommentService
+  deleteCommentService,
+  reportPostService
 };
 
