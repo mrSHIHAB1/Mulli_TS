@@ -2,18 +2,19 @@
 import { Types } from "mongoose";
 
 export enum NotificationType {
-
   CHAT_MESSAGE = "CHAT_MESSAGE",
   FEEDBACK_SUBMITTED = "FEEDBACK_SUBMITTED",
   SYSTEM = "SYSTEM",
+  NEW_LIKE = "NEW_LIKE",
+  NEW_MATCH = "NEW_MATCH",
 }
 
 export interface INotificationData {
-  locationId?: string;
   chatId?: string;
   senderId?: string;
   receiverId?: string;
   deepLink?: string;
+  matchId?: string;
   [key: string]: any;
 }
 

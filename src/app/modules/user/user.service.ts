@@ -109,7 +109,7 @@ export const verifyEmailOtp = async (
 
     // Check if user already exists with complete profile → LOGIN
     if (user && user.isProfileComplete && user.isEmailVerified) {
-      const tokens = createUserTokens(user.toObject());
+      const tokens = createUserTokens(user.toObject()); 
       return {
         success: true,
         message: "Login successful",

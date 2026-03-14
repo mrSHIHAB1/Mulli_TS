@@ -6,6 +6,7 @@ import User from "../user/user.model";
 import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
 import { IUser } from "../user/user.interface";
+import { NotificationService } from "../notification/notification.service";
 
 const calculateAge = (birthdate: Date): number => {
   const diffMs = Date.now() - new Date(birthdate).getTime();
@@ -170,6 +171,12 @@ export const likeUser = catchAsync(
           });
         }
 
+        await NotificationService.notifyNewMatch(
+          fromUser,
+          toUser as string,
+          matchData._id.toString()
+        );
+
         return sendResponse(res, {
           statusCode: 200,
           success: true,
@@ -203,6 +210,12 @@ export const likeUser = catchAsync(
             });
           }
 
+          await NotificationService.notifyNewMatch(
+            fromUser,
+            toUser as string,
+            matchData._id.toString()
+          );
+
           return sendResponse(res, {
             statusCode: 200,
             success: true,
@@ -212,6 +225,11 @@ export const likeUser = catchAsync(
         }
       }
       // End Automatic Matching Check
+
+      const senderName = currentUser
+        ? `${currentUser.firstName || ""} ${currentUser.lastName || ""}`.trim()
+        : "Someone";
+      await NotificationService.notifyNewLike(toUser as string, fromUser, senderName);
 
       sendResponse(res, {
         statusCode: 200,

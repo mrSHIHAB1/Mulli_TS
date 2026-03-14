@@ -7,6 +7,7 @@ import { discoveryRoutes } from "../modules/Discovery/discovery.routes";
 import { swipeRouter } from "../modules/Swipe/swipe.routes";
 import { matchRoutes } from "../modules/Liked/match.routes";
 import { chatRoutes } from "../modules/chat/chat.route";
+import { subscriptionRoutes } from "../modules/subscription/subscription.route";
 import path from "node:path";
 
 const router = express.Router();
@@ -39,6 +40,10 @@ const moduleRoutes = [
   {
     path: "/chat",
     route: chatRoutes,
+  },
+  {
+    path: "/subscription",
+    route: subscriptionRoutes,
   },
   
 ];

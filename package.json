@@ -33,6 +33,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@tsconfig/node16": "^16.1.8",
     "axios": "^1.13.6",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.9.0",
@@ -43,12 +44,15 @@
     "express": "^5.2.1",
     "express-session": "^1.19.0",
     "firebase-admin": "^13.7.0",
+    "google-auth-library": "^10.6.1",
+    "googleapis": "^171.4.0",
     "http-status-codes": "^2.3.0",
     "ioredis": "^5.10.0",
     "jsonwebtoken": "^9.0.3",
     "mongodb": "^7.1.0",
     "mongoose": "^9.2.3",
     "multer": "^2.1.0",
+    "node-fetch": "^3.3.2",
     "nodemailer": "^8.0.1",
     "passport": "^0.7.0",
     "passport-apple": "^2.0.2",

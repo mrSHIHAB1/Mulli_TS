@@ -225,6 +225,87 @@ const getAllNotifications = async ({
   };
 };
 
+const notifyNewLike = async (
+  receiverId: string,
+  senderId: string,
+  senderName: string
+) => {
+  // Prevent self-notification
+  if (String(receiverId) === String(senderId)) {
+    return { inAppCount: 0, successCount: 0, failureCount: 0 };
+  }
+
+  const receiverObjectId = new Types.ObjectId(receiverId);
+
+  const title = "New Like!";
+  const body = `${senderName || "Someone"} liked your profile.`;
+
+  const data: INotificationData = {
+    senderId,
+    receiverId,
+  };
+
+  const saved = await createInApp(
+    [receiverObjectId],
+    NotificationType.NEW_LIKE,
+    title,
+    body,
+    data
+  );
+
+  const pushed = await pushToUserIds([receiverObjectId], title, body, data);
+
+  const io = getIo();
+  io.to(`notification_${receiverId}`).emit("notification", {
+    type: NotificationType.NEW_LIKE,
+    title,
+    body,
+    data,
+  });
+
+  return { inAppCount: saved.length, ...pushed };
+};
+
+const notifyNewMatch = async (
+  user1Id: string,
+  user2Id: string,
+  matchId: string
+) => {
+  const user1ObjectId = new Types.ObjectId(user1Id);
+  const user2ObjectId = new Types.ObjectId(user2Id);
+
+  const title = "New Match!";
+  const body = "You have a new match! Start chatting now.";
+
+  const data: INotificationData = {
+    matchId,
+  };
+
+  const userIds = [user1ObjectId, user2ObjectId];
+
+  const saved = await createInApp(
+    userIds,
+    NotificationType.NEW_MATCH,
+    title,
+    body,
+    data
+  );
+
+  const pushed = await pushToUserIds(userIds, title, body, data);
+
+  const io = getIo();
+  userIds.forEach((id) => {
+    io.to(`notification_${id.toString()}`).emit("notification", {
+      type: NotificationType.NEW_MATCH,
+      title,
+      body,
+      data,
+    });
+  });
+
+  return { inAppCount: saved.length, ...pushed };
+};
+
 export const NotificationService = {
 
   notifyAdminsFeedbackSubmitted,
@@ -234,4 +315,6 @@ export const NotificationService = {
   markAllRead,
   deleteNotification,
   getAllNotifications,
+  notifyNewLike,
+  notifyNewMatch,
 };
