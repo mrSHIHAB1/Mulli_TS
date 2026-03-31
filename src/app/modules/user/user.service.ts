@@ -321,6 +321,14 @@ const updateUserProfileService = async (
 
   return updatedUser;
 };
+
+const updateUserStatus = async (userId: string, isOnline: boolean) => {
+  return await User.findByIdAndUpdate(
+    userId,
+    { isOnline },
+    { new: true }
+  );
+};
 export const userService={
 createUser,
 createEmailOtp,
@@ -333,5 +341,6 @@ unblockUserService,
 getBlockedUsersService,
 updateUserProfileService,
 updateFcmToken,
+updateUserStatus,
 isBlockedService
 }

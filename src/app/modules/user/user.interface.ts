@@ -38,6 +38,7 @@ export interface IUser {
   isDeleted?: boolean;
   isVerified?: boolean;
   isblocked?: boolean;
+  isOnline?: boolean;
   auth_providers?: IAuthProvider[];
 
   // Profile flags

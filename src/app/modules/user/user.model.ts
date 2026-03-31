@@ -28,6 +28,7 @@ const UserSchema: Schema<IUser> = new Schema(
     isDeleted: { type: Boolean, default: false },
     isVerified: { type: Boolean, default: false },
     isblocked: { type: Boolean, default: false },
+    isOnline: { type: Boolean, default: false },
 
     // Password & auth providers (for local/google/apple login)
     password: { type: String, select: false },
