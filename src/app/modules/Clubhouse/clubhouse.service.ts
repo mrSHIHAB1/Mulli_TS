@@ -2,6 +2,7 @@
 import mongoose from "mongoose";
 import { Post, Comment, CategorySetting } from "./clubhouse.model";
 import { ReportType, PostCategory } from "./clubhouse.interface ";
+import { NotificationService } from "../notification/notification.service";
 
 const getReplies = async (commentId: string): Promise<any[]> => {
   const replies = await Comment.find({ parentId: commentId })
@@ -89,6 +90,18 @@ export const likePostService = async (
     await updatedPost!.save();
   }
 
+  if (!alreadyLiked) {
+    const postWithAuthor = await Post.findById(postId).populate("author");
+    if (postWithAuthor && postWithAuthor.author) {
+      await NotificationService.notifyPostLiked(
+        (postWithAuthor.author as any)._id.toString(),
+        userId,
+        user.firstName || user.name,
+        postId
+      );
+    }
+  }
+
   return {
     totalLikes: updatedPost!.likesCount,
     liked: !alreadyLiked,
@@ -118,6 +131,18 @@ export const createCommentService = async (
   await Post.findByIdAndUpdate(postId, {
     $inc: { commentsCount: 1 },
   });
+
+  const postWithAuthor = await Post.findById(postId).populate("author");
+  if (postWithAuthor && postWithAuthor.author) {
+    // We need to get the sender's name. We can find the user.
+    const sender = await mongoose.model("User").findById(userId);
+    await NotificationService.notifyPostCommented(
+      (postWithAuthor.author as any)._id.toString(),
+      userId,
+      sender?.firstName || sender?.name || "Someone",
+      postId
+    );
+  }
 
   return result;
 };

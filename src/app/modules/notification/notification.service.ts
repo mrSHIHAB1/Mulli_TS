@@ -332,8 +332,87 @@ const sendTestPush = async () => {
   }
 };
 
-export const NotificationService = {
+const notifyPostLiked = async (
+  receiverId: string,
+  senderId: string,
+  senderName: string,
+  postId: string
+) => {
+  if (String(receiverId) === String(senderId)) return;
 
+  const receiverObjectId = new Types.ObjectId(receiverId);
+
+  const title = "Post Liked!";
+  const body = `${senderName || "Someone"} liked your post.`;
+
+  const data: INotificationData = {
+    senderId,
+    receiverId,
+    postId,
+  };
+
+  const saved = await createInApp(
+    [receiverObjectId],
+    NotificationType.POST_LIKED,
+    title,
+    body,
+    data
+  );
+
+  await pushToUserIds([receiverObjectId], title, body, data);
+
+  const io = getIo();
+  io.to(`notification_${receiverId}`).emit("notification", {
+    type: NotificationType.POST_LIKED,
+    title,
+    body,
+    data,
+  });
+
+  return { inAppCount: saved.length };
+};
+
+const notifyPostCommented = async (
+  receiverId: string,
+  senderId: string,
+  senderName: string,
+  postId: string
+) => {
+  if (String(receiverId) === String(senderId)) return;
+
+  const receiverObjectId = new Types.ObjectId(receiverId);
+
+  const title = "New Comment!";
+  const body = `${senderName || "Someone"} commented on your post.`;
+
+  const data: INotificationData = {
+    senderId,
+    receiverId,
+    postId,
+  };
+
+  const saved = await createInApp(
+    [receiverObjectId],
+    NotificationType.POST_COMMENTED,
+    title,
+    body,
+    data
+  );
+
+  await pushToUserIds([receiverObjectId], title, body, data);
+
+  const io = getIo();
+  io.to(`notification_${receiverId}`).emit("notification", {
+    type: NotificationType.POST_COMMENTED,
+    title,
+    body,
+    data,
+  });
+
+  return { inAppCount: saved.length };
+};
+
+export const NotificationService = {
   notifyAdminsFeedbackSubmitted,
   notifyChatMessage,
   getMyNotifications,
@@ -343,5 +422,7 @@ export const NotificationService = {
   getAllNotifications,
   notifyNewLike,
   notifyNewMatch,
-  sendTestPush
+  notifyPostLiked,
+  notifyPostCommented,
+  sendTestPush,
 };

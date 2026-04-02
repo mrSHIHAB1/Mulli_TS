@@ -43,3 +43,52 @@ export const userStatusSocket = (io: Server) => {
     });
   });
 };
+// import { Server, Socket } from "socket.io";
+
+// export const onlineUsers: Record<string, string> = {}; // userId -> socketId
+
+// export const userStatusSocket = (io: Server) => {
+//   io.on("connection", (socket: Socket) => {
+
+//     let userId: string | null = null;
+
+//     // When user joins (comes online)
+//     socket.on("user-online", (_userId: string) => {
+//       if (!_userId) return;
+
+//       userId = _userId;
+
+//       // Join room with userId
+//       socket.join(userId);
+
+//       // Store active user
+//       onlineUsers[userId] = socket.id;
+
+//       console.log(`User ${userId} is online`);
+
+//       // Send all online users
+//       io.emit("get_online_users", Object.keys(onlineUsers));
+//     });
+
+//     // Optional manual offline event
+//     socket.on("user-offline", (_userId: string) => {
+//       if (!_userId) return;
+
+//       delete onlineUsers[_userId];
+
+//       console.log(`User ${_userId} set offline manually`);
+
+//       io.emit("get_online_users", Object.keys(onlineUsers));
+//     });
+
+//     // Handle disconnect
+//     socket.on("disconnect", () => {
+//       if (userId) {
+//         delete onlineUsers[userId];
+//         console.log(`User ${userId} disconnected`);
+//       }
+
+//       io.emit("get_online_users", Object.keys(onlineUsers));
+//     });
+//   });
+// };

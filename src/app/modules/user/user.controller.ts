@@ -295,6 +295,18 @@ export const updateUserProfile = catchAsync(
   }
 );
 
+export const deleteAccount = catchAsync(async (req: Request, res: Response) => {
+  const currentUser: any = (req as any).user;
+  const result = await userService.deleteUserService(currentUser._id);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: result.message,
+    data: null,
+  });
+});
+
 export const userControllers = {
   createUser,
   sendEmailOtp,
@@ -302,6 +314,7 @@ export const userControllers = {
   sendPhoneOtp,
   verifyPhoneOtp,  
   updateFcmToken,
-  updateUserProfile
+  updateUserProfile,
+  deleteAccount,
 };
 

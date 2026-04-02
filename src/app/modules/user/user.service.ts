@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { User } from "./user.model";
+import { Post, Comment } from "../Clubhouse/clubhouse.model";
 import { generateOtp } from "../../utils/otp.util";
 import { sendOtpEmail } from "../../utils/email.util";
 import { redisClient } from "../../config/redis.config";
@@ -329,6 +330,24 @@ const updateUserStatus = async (userId: string, isOnline: boolean) => {
     { new: true }
   );
 };
+const deleteUserService = async (userId: string) => {
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  // Delete all posts authored by this user
+  await Post.deleteMany({ author: userId });
+
+  // Delete all comments made by this user
+  await Comment.deleteMany({ user: userId });
+
+  // Finally delete the user
+  await User.findByIdAndDelete(userId);
+
+  return { success: true, message: "User and their clubhouse data deleted successfully" };
+};
+
 export const userService={
 createUser,
 createEmailOtp,
@@ -342,5 +361,6 @@ getBlockedUsersService,
 updateUserProfileService,
 updateFcmToken,
 updateUserStatus,
-isBlockedService
+isBlockedService,
+  deleteUserService,
 }

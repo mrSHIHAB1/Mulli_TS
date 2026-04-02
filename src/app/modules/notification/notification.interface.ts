@@ -7,6 +7,8 @@ export enum NotificationType {
   SYSTEM = "SYSTEM",
   NEW_LIKE = "NEW_LIKE",
   NEW_MATCH = "NEW_MATCH",
+  POST_LIKED = "POST_LIKED",
+  POST_COMMENTED = "POST_COMMENTED",
 }
 
 export interface INotificationData {
