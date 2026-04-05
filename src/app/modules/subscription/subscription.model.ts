@@ -3,7 +3,7 @@ import { ISubscription, Plan, SubscriptionStatus } from "./subscription.interfac
 
 const subscriptionSchema = new Schema<ISubscription>(
   {
-    userId: { type: Schema.Types.ObjectId, ref: "User", required: true, unique: true },
+    userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     plan_type: { type: String, enum: Object.values(Plan), required: true },
     platform: { type: String, enum: ["ios", "android"], required: true },
 
@@ -14,7 +14,7 @@ const subscriptionSchema = new Schema<ISubscription>(
     start_date: { type: Date, required: true },
     end_date: { type: Date, required: true },
 
-    status: { type: String, enum: Object.values(SubscriptionStatus), default: SubscriptionStatus.ACTIVE },
+    status: { type: String, enum: Object.values(SubscriptionStatus), default: SubscriptionStatus.ACTIVE, index: true },
 
     auto_renew: { type: Boolean, default: true },
 
@@ -23,6 +23,10 @@ const subscriptionSchema = new Schema<ISubscription>(
   },
   { timestamps: true },
 );
+
+// Compound index for common queries
+subscriptionSchema.index({ userId: 1, status: 1 });
+subscriptionSchema.index({ userId: 1, createdAt: -1 });
 
 const Subscription = model<ISubscription>("Subscription", subscriptionSchema);
 export default Subscription;

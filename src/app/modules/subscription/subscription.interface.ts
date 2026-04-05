@@ -4,6 +4,8 @@ import { Types } from "mongoose";
 export enum Plan {
   MULLI_PLUS = "MULLI_PLUS",
   MULLI_X = "MULLI_X",
+  MULLI_BRIDIE= "MULLI_BRIDIE",
+  MULLI_ACE = "MULLI_ACE",
 }
 
 export enum SubscriptionStatus {

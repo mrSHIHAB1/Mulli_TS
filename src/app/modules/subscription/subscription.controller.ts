@@ -6,7 +6,9 @@ import { JwtPayload } from "jsonwebtoken";
 import { SubscriptionService } from "./subscription.service";
 
 const createSubscription = catchAsync(async (req: Request, res: Response) => {
-    const { userId } = req.user as JwtPayload;
+
+    // const { userId } = req.user as JwtPayload;
+    const userId = "6610f1c2a1234567890abcd1"; // test ObjectId
     const result = await SubscriptionService.createSubscription({
         ...req.body,
         userId,

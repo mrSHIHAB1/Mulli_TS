@@ -11,6 +11,8 @@ const router = Router();
 router.post("/signup/email", userControllers.sendEmailOtp);
 router.post("/signup/email/verify", userControllers.verifyEmailOtp);
 
+//
+
 // Phone Signup Flow
 router.post("/signup/phone", userControllers.sendPhoneOtp);
 router.post("/signup/phone/verify", userControllers.verifyPhoneOtp);
