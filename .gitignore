@@ -4,7 +4,7 @@ node_modules
 dist/
 /generated/prisma
 
-!uploads/.gitkeep
+
 *.log
 keys/
 keys/*.json
