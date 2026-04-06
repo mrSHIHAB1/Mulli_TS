@@ -3,6 +3,11 @@ import Subscription from "./subscription.model";
 import { ISubscription, SubscriptionStatus } from "./subscription.interface";
 import AppError from "../../errorHelpers/AppError";
 import { StatusCodes } from "http-status-codes";
+import {
+  cacheUserSubscription,
+  getCachedUserSubscription,
+  invalidateUserSubscriptionCache,
+} from "../../helpers/redisCache.helper";
 
 const createSubscription = async (payload: ISubscription) => {
   // Check if user has an active subscription already
@@ -26,22 +31,43 @@ const createSubscription = async (payload: ISubscription) => {
  * Get latest active subscription for user
  */
 const getMySubscription = async (userId: string) => {
+  const cachedSubscription = await getCachedUserSubscription(userId);
+  if (cachedSubscription !== undefined) {
+    if (cachedSubscription === null) return null;
+
+    // Check if cached subscription has expired
+    if (cachedSubscription.end_date && new Date() > new Date(cachedSubscription.end_date)) {
+      const actualSub = await Subscription.findOne({ _id: (cachedSubscription as any)._id || (cachedSubscription as any).id });
+      if (actualSub) {
+        actualSub.status = SubscriptionStatus.EXPIRED;
+        await actualSub.save();
+      }
+      await invalidateUserSubscriptionCache(userId);
+      return null;
+    }
+
+    return cachedSubscription;
+  }
+
   const subscription = await Subscription.findOne({
     userId: new Types.ObjectId(userId),
     status: SubscriptionStatus.ACTIVE,
-  }).sort({ createdAt: -1 });
+  }).sort({ createdAt: -1 }).lean();
 
   if (!subscription) {
+    await cacheUserSubscription(userId, null);
     return null;
   }
 
   // Check if subscription has expired
   if (subscription.end_date && new Date() > subscription.end_date) {
-    // Auto-mark as expired
+    await Subscription.findByIdAndUpdate(subscription._id, { status: SubscriptionStatus.EXPIRED });
     subscription.status = SubscriptionStatus.EXPIRED;
-    await subscription.save();
+    await cacheUserSubscription(userId, null);
     return null;
   }
+
+  await cacheUserSubscription(userId, subscription as any);
 
   return subscription;
 };
@@ -76,6 +102,10 @@ const updateSubscriptionStatus = async (
     throw new AppError(StatusCodes.NOT_FOUND, "Subscription not found");
   }
 
+  // Invalidate user subscription cache
+  const userId = subscription.userId.toString();
+  await invalidateUserSubscriptionCache(userId);
+
   return subscription;
 };
 
@@ -98,6 +128,9 @@ const cancelSubscription = async (userId: string) => {
   if (!subscription) {
     throw new AppError(StatusCodes.NOT_FOUND, "Active subscription not found");
   }
+
+  // Invalidate cache when subscription is cancelled
+  await invalidateUserSubscriptionCache(userId);
 
   return subscription;
 };
@@ -200,11 +233,31 @@ const getSubscriptionStats = async () => {
  * Check if user has active subscription
  */
 const hasActiveSubscription = async (userId: string): Promise<boolean> => {
+  // Check cache first
+  const cachedSubscription = await getCachedUserSubscription(userId);
+  if (cachedSubscription !== undefined) {
+    if (cachedSubscription === null) return false;
+    
+    // Check if cached subscription has expired
+    if (cachedSubscription.end_date && new Date() > new Date(cachedSubscription.end_date)) {
+      return false;
+    }
+    return cachedSubscription.status === SubscriptionStatus.ACTIVE;
+  }
+
   const subscription = await Subscription.findOne({
     userId: new Types.ObjectId(userId),
     status: SubscriptionStatus.ACTIVE,
     end_date: { $gt: new Date() },
   });
+
+  if (subscription) {
+    // Cache the subscription
+    await cacheUserSubscription(userId, subscription);
+  } else {
+    // Cache the null result
+    await cacheUserSubscription(userId, null);
+  }
 
   return !!subscription;
 };

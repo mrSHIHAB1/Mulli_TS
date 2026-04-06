@@ -7,6 +7,8 @@ import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
 import { IUser } from "../user/user.interface";
 import { NotificationService } from "../notification/notification.service";
+import { SubscriptionService } from "../subscription/subscription.service";
+import { Plan } from "../subscription/subscription.interface";
 
 const calculateAge = (birthdate: Date): number => {
   const diffMs = Date.now() - new Date(birthdate).getTime();
@@ -123,6 +125,32 @@ export const likeUser = catchAsync(
           data: null,
         });
       }
+
+      // -------------------------------------------------------------
+      // Subscription Check: Unlimited likes for MULLI_X only
+      // -------------------------------------------------------------
+      // const mySubscription = await SubscriptionService.getMySubscription(fromUser);
+      
+      // if (!mySubscription || mySubscription.plan_type !== Plan.MULLI_X) {
+      //   const today = new Date();
+      //   today.setHours(0, 0, 0, 0);
+        
+      //   const likesToday = await Swipe.countDocuments({
+      //     fromUser,
+      //     action: "like",
+      //     createdAt: { $gte: today }
+      //   });
+        
+      //   const DAILY_LIKE_LIMIT = 10;
+      //   if (likesToday >= DAILY_LIKE_LIMIT) {
+      //     return sendResponse(res, {
+      //       statusCode: 403, // Or 402 Payment Required
+      //       success: false,
+      //       message: "Daily like limit reached. Upgrade to Mulli X for unlimited likes!",
+      //       data: null,
+      //     });
+      //   }
+      // }
 
       const existingSwipe = await Swipe.findOne({ fromUser, toUser });
 
@@ -270,6 +298,21 @@ export const likeUser = catchAsync(
 export const getUsersWhoLikedMe = catchAsync(
   async (req: Request, res: Response) => {
     const myId = (req as any).user?.id;
+
+    // Check subscription: MUST have Mulli Plus or Mulli X
+    // const mySubscription = await SubscriptionService.getMySubscription(myId);
+    
+    // if (
+    //   !mySubscription || 
+    //   ![Plan.MULLI_PLUS, Plan.MULLI_X].includes(mySubscription.plan_type as Plan)
+    // ) {
+    //   return sendResponse(res, {
+    //     statusCode: 403,
+    //     success: false,
+    //     message: "Upgrade to Mulli Plus or Mulli X to see who liked you!",
+    //     data: null,
+    //   });
+    // }
 
     const swipes = await Swipe.find({
       toUser: myId,

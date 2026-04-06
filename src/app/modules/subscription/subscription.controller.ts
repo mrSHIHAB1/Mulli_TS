@@ -8,7 +8,7 @@ import { SubscriptionService } from "./subscription.service";
 const createSubscription = catchAsync(async (req: Request, res: Response) => {
 
     // const { userId } = req.user as JwtPayload;
-    const userId = "6610f1c2a1234567890abcd1"; // test ObjectId
+    const userId = "69a65518b1884ecd3f638ce3"; // test ObjectId
     const result = await SubscriptionService.createSubscription({
         ...req.body,
         userId,
@@ -23,8 +23,9 @@ const createSubscription = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getMySubscription = catchAsync(async (req: Request, res: Response) => {
-    const { userId } = req.user as JwtPayload;
-    const result = await SubscriptionService.getMySubscription(userId);
+   
+    const { id } = req.user as JwtPayload;
+    const result = await SubscriptionService.getMySubscription(id);
 
     sendResponse(res, {
         success: true,
@@ -64,9 +65,9 @@ const getAllSubscriptions = catchAsync(async (req: Request, res: Response) => {
 });
 
 const cancelSubscription = catchAsync(async (req: Request, res: Response) => {
-    const { userId } = req.user as JwtPayload;
+    const { id } = req.user as JwtPayload;
 
-    const result = await SubscriptionService.cancelSubscription(userId);
+    const result = await SubscriptionService.cancelSubscription(id);
 
     sendResponse(res, {
         success: true,

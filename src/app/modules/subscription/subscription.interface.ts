@@ -6,6 +6,7 @@ export enum Plan {
   MULLI_X = "MULLI_X",
   MULLI_BRIDIE= "MULLI_BRIDIE",
   MULLI_ACE = "MULLI_ACE",
+  MULLI_TRIAL="MULLI_TRIAL"
 }
 
 export enum SubscriptionStatus {
@@ -41,3 +42,4 @@ export interface ISubscription {
   createdAt?: Date;
   updatedAt?: Date;
 }
+  
