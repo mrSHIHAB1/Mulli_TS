@@ -66,7 +66,7 @@ passport.use(
           user = await User.create({
             email,
             name: profile.displayName,
-            picture: profile.photos?.[0]?.value,
+            profileImage: profile.photos?.[0]?.value,
             role: Role.USER,
             isVerified: true,
             auth_providers: [

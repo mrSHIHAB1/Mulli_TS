@@ -6,7 +6,7 @@ import {
 import { verifyToken } from "../../utils/jwt";
 import { envVars } from "../../config/env";
 import User from "../user/user.model";
-import * as userService from "../user/user.service";
+import { userService } from "../user/user.service";
 
 interface ServiceResult<T = any> {
   success: boolean;

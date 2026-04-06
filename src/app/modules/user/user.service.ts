@@ -2,7 +2,7 @@
 import { User } from "./user.model";
 import { Post, Comment } from "../Clubhouse/clubhouse.model";
 import { generateOtp } from "../../utils/otp.util";
-import { sendOtpEmail } from "../../utils/email.util";
+import { sendOTPEmail } from "../../utils/email.util";
 import { redisClient } from "../../config/redis.config";
 import { createUserTokens } from "../../utils/userTokens";
 import mongoose from "mongoose";
@@ -10,7 +10,7 @@ import { sendOTP } from "../../config/twillio.config";
 import getPlaceNameGoogle from "../../utils/getGoogleLocation";
 import { fileUploader } from "../../helpers/fileUpload";
 
-const OTP_EXPIRE = 3 * 60; // 3 minutes
+const OTP_EXPIRE = 5 * 60; // 3 minutes
 
 // CREATE / COMPLETE USER PROFILE
  const createUser = async (data: any): Promise<any> => {
@@ -63,7 +63,8 @@ const OTP_EXPIRE = 3 * 60; // 3 minutes
 ): Promise<string> => {
   const otp = generateOtp();
 
-  await sendOtpEmail({ to: email, otp });
+  // await sendOtpEmail({ to: email, otp });
+  await sendOTPEmail(email, otp );
   await redisClient.setex(`otp:email:${email}`, OTP_EXPIRE, otp);
   return otp;
 };
@@ -77,7 +78,7 @@ const createEmailOtp = async (email: string): Promise<string> => {
     throw new Error("Create Your Account First");
   }
 
-  await sendOtpEmail({ to: email, otp });
+  // await sendOtpEmail({ to: email, otp });
   await redisClient.setex(`otp:email:${email}`, OTP_EXPIRE, otp);
   return otp;
 };

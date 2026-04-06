@@ -14,6 +14,7 @@ interface APPLE_AUTH_TYPE {
   APPLE_KEY_ID: string;
   APPLE_PRIVATE_KEY_PATH: string;
   APPLE_CALLBACK_URL: string;
+  APPLE_SHARED_SECRET: string;
 }
 
 interface TWILIO_TYPE {
@@ -58,6 +59,9 @@ interface EnvConfig {
   SMTP_PASS?: string;
   SMTP_HOST?: string;
   SMTP_HOST_PORT?: string;
+  SENDGRID_API_KEY: string;
+SENDGRID_TEMPLATE_ID: string;
+EMAIL_FROM: string;
 
   GOOGLE_MAPS_API_KEY:string;
    GOOGLE_AUTH: GOOGLE_TYPE;
@@ -84,7 +88,7 @@ const loadEnvVariables = (): EnvConfig => {
     "SMTP_PASS",
     "SMTP_HOST",
     "SMTP_HOST_PORT",
-  
+  "APPLE_SHARED_SECRET",
     "GOOGLE_MAPS_API_KEY",
     "GOOGLE_CLIENT_ID",
     "GOOGLE_CLIENT_SECRET",
@@ -98,7 +102,10 @@ const loadEnvVariables = (): EnvConfig => {
         "TWILIO_ACCOUNT_SID",
     "TWILIO_AUTH_TOKEN",
     "TWILIO_PHONE_NUMBER",
-    "FIREBASE_SERVICE_ACCOUNT_PATH"
+    "FIREBASE_SERVICE_ACCOUNT_PATH",
+     "SENDGRID_API_KEY",
+"SENDGRID_TEMPLATE_ID",
+"EMAIL_FROM",
   ];
 
   requiredEnvVariables.forEach((key) => {
@@ -143,6 +150,9 @@ const loadEnvVariables = (): EnvConfig => {
     SMTP_PASS: process.env.SMTP_PASS,
     SMTP_HOST: process.env.SMTP_HOST,
     SMTP_HOST_PORT: process.env.SMTP_HOST_PORT,
+     SENDGRID_API_KEY: process.env.SENDGRID_API_KEY as string,
+SENDGRID_TEMPLATE_ID: process.env.SENDGRID_TEMPLATE_ID as string,
+EMAIL_FROM: process.env.EMAIL_FROM as string,
   
     GOOGLE_MAPS_API_KEY: process.env.GOOGLE_MAPS_API_KEY as string,
        GOOGLE_AUTH: {
@@ -156,6 +166,7 @@ const loadEnvVariables = (): EnvConfig => {
       APPLE_KEY_ID: process.env.APPLE_KEY_ID as string,
       APPLE_PRIVATE_KEY_PATH: process.env.APPLE_PRIVATE_KEY_PATH as string,
       APPLE_CALLBACK_URL: process.env.APPLE_CALLBACK_URL as string,
+      APPLE_SHARED_SECRET: process.env.APPLE_SHARED_SECRET as string,
     },
     FRONTEND_URL: process.env.FRONTEND_URL as string,
    twilio: {
