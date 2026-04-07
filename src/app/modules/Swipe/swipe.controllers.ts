@@ -9,6 +9,7 @@ import { IUser } from "../user/user.interface";
 import { NotificationService } from "../notification/notification.service";
 import { SubscriptionService } from "../subscription/subscription.service";
 import { Plan } from "../subscription/subscription.interface";
+import Subscription from "../subscription/subscription.model";
 
 const calculateAge = (birthdate: Date): number => {
   const diffMs = Date.now() - new Date(birthdate).getTime();
@@ -129,28 +130,28 @@ export const likeUser = catchAsync(
       // -------------------------------------------------------------
       // Subscription Check: Unlimited likes for MULLI_X only
       // -------------------------------------------------------------
-      // const mySubscription = await SubscriptionService.getMySubscription(fromUser);
+      const mySubscription = await SubscriptionService.getMySubscription(fromUser);
       
-      // if (!mySubscription || mySubscription.plan_type !== Plan.MULLI_X) {
-      //   const today = new Date();
-      //   today.setHours(0, 0, 0, 0);
+      if (!mySubscription || mySubscription.plan_type !== Plan.MULLI_X) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
         
-      //   const likesToday = await Swipe.countDocuments({
-      //     fromUser,
-      //     action: "like",
-      //     createdAt: { $gte: today }
-      //   });
+        const likesToday = await Swipe.countDocuments({
+          fromUser,
+          action: "like",
+          createdAt: { $gte: today }
+        });
         
-      //   const DAILY_LIKE_LIMIT = 10;
-      //   if (likesToday >= DAILY_LIKE_LIMIT) {
-      //     return sendResponse(res, {
-      //       statusCode: 403, // Or 402 Payment Required
-      //       success: false,
-      //       message: "Daily like limit reached. Upgrade to Mulli X for unlimited likes!",
-      //       data: null,
-      //     });
-      //   }
-      // }
+        const DAILY_LIKE_LIMIT = 10;
+        if (likesToday >= DAILY_LIKE_LIMIT) {
+          return sendResponse(res, {
+            statusCode: 403, // Or 402 Payment Required
+            success: false,
+            message: "Daily like limit reached. Upgrade to Mulli X for unlimited likes!",
+            data: null,
+          });
+        }
+      }
 
       const existingSwipe = await Swipe.findOne({ fromUser, toUser });
 
@@ -296,23 +297,25 @@ export const likeUser = catchAsync(
 // });
 
 export const getUsersWhoLikedMe = catchAsync(
+  
   async (req: Request, res: Response) => {
     const myId = (req as any).user?.id;
-
+// ----------------------------------------------------------
     // Check subscription: MUST have Mulli Plus or Mulli X
-    // const mySubscription = await SubscriptionService.getMySubscription(myId);
-    
-    // if (
-    //   !mySubscription || 
-    //   ![Plan.MULLI_PLUS, Plan.MULLI_X].includes(mySubscription.plan_type as Plan)
-    // ) {
-    //   return sendResponse(res, {
-    //     statusCode: 403,
-    //     success: false,
-    //     message: "Upgrade to Mulli Plus or Mulli X to see who liked you!",
-    //     data: null,
-    //   });
-    // }
+    // ----------------------------------------------------------
+    const mySubscription = await SubscriptionService.getMySubscription(myId);
+    console.log("My Subscription:", mySubscription);
+    if (
+      !mySubscription || 
+      ![Plan.MULLI_PLUS, Plan.MULLI_X].includes(mySubscription.plan_type as Plan)
+    ) {
+      return sendResponse(res, {
+        statusCode: 403,
+        success: false,
+        message: "Upgrade to Mulli Plus or Mulli X to see who liked you!",
+        data: null,
+      });
+    }
 
     const swipes = await Swipe.find({
       toUser: myId,
@@ -329,8 +332,28 @@ export const getUsersWhoLikedMe = catchAsync(
         age: user?.birthdate ? calculateAge(user.birthdate) : null,
         status: swipe.status,
       };
+
     });
 
+    const userIds = usersWhoLikedMe.map((u: any) => u._id).filter(Boolean);
+    const activeSubs = await Subscription.find({
+      userId: { $in: userIds },
+      status: "ACTIVE",
+      plan_type: Plan.MULLI_X
+    }).select("userId");
+
+    const privilegedUserIds = new Set(activeSubs.map(s => s.userId.toString()));
+
+    usersWhoLikedMe.forEach((u: any) => {
+      u.hasMullix = u._id ? privilegedUserIds.has(u._id.toString()) : false;
+    });
+
+    usersWhoLikedMe.sort((a: any, b: any) => {
+      if (a.hasMullix && !b.hasMullix) return -1;
+      if (!a.hasMullix && b.hasMullix) return 1;
+      return 0;
+    });
+//finish
     sendResponse(res, {
       statusCode: 200,
       success: true,
@@ -359,6 +382,27 @@ export const getUsersILiked = catchAsync(
         age: user?.birthdate ? calculateAge(user.birthdate) : null,
         status: swipe.status,
       };
+    });
+
+    
+
+    const userIds = likedUsers.map((u: any) => u._id).filter(Boolean);
+    const activeSubs = await Subscription.find({
+      userId: { $in: userIds },
+      status: "ACTIVE",
+      plan_type: Plan.MULLI_X
+    }).select("userId");
+
+    const privilegedUserIds = new Set(activeSubs.map(s => s.userId.toString()));
+
+    likedUsers.forEach((u: any) => {
+      u.hasMullix = u._id ? privilegedUserIds.has(u._id.toString()) : false;
+    });
+
+    likedUsers.sort((a: any, b: any) => {
+      if (a.hasMullix && !b.hasMullix) return -1;
+      if (!a.hasMullix && b.hasMullix) return 1;
+      return 0;
     });
 
     sendResponse(res, {

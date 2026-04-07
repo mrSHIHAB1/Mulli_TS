@@ -3,6 +3,8 @@ import { Request, Response } from "express";
 import Match from "./match.model";
 import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
+import Subscription from "../subscription/subscription.model";
+import { Plan } from "../subscription/subscription.interface";
 
 const calculateAge = (birthdate: Date): number => {
   const diffMs = Date.now() - new Date(birthdate).getTime();
@@ -52,7 +54,30 @@ export const getMyMatches = catchAsync(async (req: Request, res: Response) => {
       matchType: match.matchType,
     };
   });
+  // -------------------------------------------------------------
+      // Subscription Check: Unlimited likes for MULLI_X only
+      // -------------------------------------------------------------
 
+
+  const userIds = matchedProfiles.map((p: any) => p._id).filter(Boolean);
+  const activeSubs = await Subscription.find({
+    userId: { $in: userIds },
+    status: "ACTIVE",
+    plan_type: Plan.MULLI_X
+  }).select("userId");
+
+  const privilegedUserIds = new Set(activeSubs.map(s => s.userId.toString()));
+
+  matchedProfiles.forEach((p: any) => {
+    p.hasMullix = p._id ? privilegedUserIds.has(p._id.toString()) : false;
+  });
+
+  matchedProfiles.sort((a: any, b: any) => {
+    if (a.hasMullix && !b.hasMullix) return -1;
+    if (!a.hasMullix && b.hasMullix) return 1;
+    return 0;
+  });
+//finish
   sendResponse(res, {
     statusCode: 200,
     success: true,

@@ -1,6 +1,9 @@
 
 import User from "../user/user.model";
 import { calculateAge } from "../../utils/calculateAge";
+import { SubscriptionService } from "../subscription/subscription.service";
+import { Plan } from "../subscription/subscription.interface";
+import AppError from "../../errorHelpers/AppError";
 
 interface Filters {
   // Basic
@@ -87,7 +90,23 @@ export const discoveryService = async (
     geoNear.maxDistance = filters.maxDistance * 1000;
 
   // PREMIUM check
-  const isPremium = true;
+  const mySubscription = await SubscriptionService.getMySubscription(authUser.id);
+  const isPremium = mySubscription && [Plan.MULLI_PLUS, Plan.MULLI_X].includes(mySubscription.plan_type as Plan);
+
+  const hasPremiumFilters = filters.minPhotos !== undefined ||
+    filters.hasBio !== undefined ||
+    filters.minHeight !== undefined ||
+    filters.maxHeight !== undefined ||
+    filters.ethnicity !== undefined ||
+    filters.politics !== undefined ||
+    filters.religion !== undefined ||
+    filters.openTo !== undefined ||
+    (filters.interests && filters.interests.length > 0) ||
+    (filters.languages && filters.languages.length > 0);
+
+  if (hasPremiumFilters && !isPremium) {
+    throw new AppError(403, "Please upgrade to Mulli Plus or Mulli X to use these filters.");
+  }
 
   if (isPremium) {
     // Min Photos
@@ -139,6 +158,27 @@ export const discoveryService = async (
         },
       },
     },
+    // Check if user has active Mulli X subscription
+    {
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "userId",
+        pipeline: [
+          { $match: { status: "ACTIVE", plan_type: "MULLI_X" } },
+          { $project: { _id: 1 } }
+        ],
+        as: "mullixSubscription"
+      }
+    },
+    {
+      $addFields: {
+        hasMullix: { $gt: [{ $size: "$mullixSubscription" }, 0] }
+      }
+    },
+    {
+      $sort: { hasMullix: -1, distanceKm: 1 }
+    },
     { $limit: 50 },
     {
       $project: {
@@ -149,6 +189,7 @@ export const discoveryService = async (
         __v: 0,
         createdAt: 0,
         updatedAt: 0,
+        mullixSubscription: 0,
       },
     },
   ];
@@ -171,7 +212,8 @@ export const discoveryService = async (
     height: u.height,
     religion: u.religion,
     handicaprange: u.handicaprange, 
-    tcp:"N/A"
+    tcp:"N/A",
+    hasMullix: u.hasMullix || false
   }));
 
   return transformed;

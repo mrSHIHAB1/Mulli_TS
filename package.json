@@ -37,6 +37,7 @@
     "@tsconfig/node16": "^16.1.8",
     "axios": "^1.13.6",
     "bcryptjs": "^3.0.3",
+    "bullmq": "^5.73.0",
     "cloudinary": "^2.9.0",
     "connect-redis": "^9.0.0",
     "cookie-parser": "^1.4.7",

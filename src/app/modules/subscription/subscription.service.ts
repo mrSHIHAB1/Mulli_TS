@@ -40,6 +40,7 @@ const getMySubscription = async (userId: string) => {
       const actualSub = await Subscription.findOne({ _id: (cachedSubscription as any)._id || (cachedSubscription as any).id });
       if (actualSub) {
         actualSub.status = SubscriptionStatus.EXPIRED;
+        
         await actualSub.save();
       }
       await invalidateUserSubscriptionCache(userId);
@@ -90,11 +91,11 @@ const getSubscriptionHistory = async (userId: string, limit: number = 10) => {
  */
 const updateSubscriptionStatus = async (
   transactionId: string,
-  status: SubscriptionStatus
+  updateData: { status: string; plan_type?: string } // Accept additional fields
 ) => {
   const subscription = await Subscription.findOneAndUpdate(
     { transactionId },
-    { status, updatedAt: new Date() },
+    { ...updateData, updatedAt: new Date() }, // Spread all fields from updateData
     { new: true }
   );
 
@@ -104,6 +105,7 @@ const updateSubscriptionStatus = async (
 
   // Invalidate user subscription cache
   const userId = subscription.userId.toString();
+  console.log(`Invalidating cache for user ${userId} due to subscription update`);
   await invalidateUserSubscriptionCache(userId);
 
   return subscription;
@@ -139,34 +141,34 @@ const cancelSubscription = async (userId: string) => {
  * Process Apple/Google webhook events
  * Webhook signature validation should be done before calling this
  */
-const subscriptionWebhook = async (payload: any) => {
-  // This should be platform-specific
-  // For now, basic validation
+// const subscriptionWebhook = async (payload: any) => {
+//   // This should be platform-specific
+//   // For now, basic validation
 
-  const { transactionId, status, type, platform } = payload;
+//   const { transactionId, status, type, platform } = payload;
   
-  if (!transactionId || !status) {
-    throw new AppError(StatusCodes.BAD_REQUEST, "Invalid webhook payload");
-  }
+//   if (!transactionId || !status) {
+//     throw new AppError(StatusCodes.BAD_REQUEST, "Invalid webhook payload");
+//   }
 
-  // Handle different event types
-  switch (type) {
-    case "SUBSCRIPTION_RENEWED":
-      return updateSubscriptionStatus(transactionId, SubscriptionStatus.ACTIVE);
+//   // Handle different event types
+//   switch (type) {
+//     case "SUBSCRIPTION_RENEWED":
+//       return updateSubscriptionStatus(transactionId, SubscriptionStatus.ACTIVE);
     
-    case "SUBSCRIPTION_EXPIRED":
-      return updateSubscriptionStatus(transactionId, SubscriptionStatus.EXPIRED);
+//     case "SUBSCRIPTION_EXPIRED":
+//       return updateSubscriptionStatus(transactionId, SubscriptionStatus.EXPIRED);
     
-    case "SUBSCRIPTION_CANCELLED":
-      return updateSubscriptionStatus(transactionId, SubscriptionStatus.CANCELLED);
+//     case "SUBSCRIPTION_CANCELLED":
+//       return updateSubscriptionStatus(transactionId, SubscriptionStatus.CANCELLED);
     
-    case "SUBSCRIPTION_REVOKED":
-      return updateSubscriptionStatus(transactionId, SubscriptionStatus.CANCELLED);
+//     case "SUBSCRIPTION_REVOKED":
+//       return updateSubscriptionStatus(transactionId, SubscriptionStatus.CANCELLED);
     
-    default:
-      return { received: true, message: "Event type not handled" };
-  }
-};
+//     default:
+//       return { received: true, message: "Event type not handled" };
+//   }
+// };
 
 /**
  * Get all subscriptions with pagination and filtering
@@ -269,7 +271,7 @@ export const SubscriptionService = {
   updateSubscriptionStatus,
   getAllSubscriptions,
   cancelSubscription,
-  subscriptionWebhook,
+  // subscriptionWebhook,
   getSubscriptionStats,
   hasActiveSubscription,
 };

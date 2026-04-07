@@ -24,8 +24,8 @@ router.get(
 );
 
 router.patch(
-  "/:transactionId",
-  checkAuth(Role.ADMIN), // Ensure only admins can update status manually
+  "/status/:transactionId",
+  checkAuth(...Object.values(Role)), // Ensure only admins can update status manually
   SubscriptionController.updateSubscription
 );
 
@@ -35,11 +35,17 @@ router.post(
   SubscriptionController.cancelSubscription
 );
 
+router.post(
+  "/trial",
+  checkAuth(...Object.values(Role)), // Ensure authenticated users can create trial subscriptions
+  SubscriptionController.createTrialSubscription
+);
+
 // Note: webhook endpoints often don't require the same authentication 
 // as they are called by external services (Apple/Google).
-router.post(
-  "/webhook",
-  SubscriptionController.subscriptionWebhook
-);
+// router.post(
+//   "/webhook",
+//   SubscriptionController.subscriptionWebhook
+// );
 
 export const subscriptionRoutes = router;

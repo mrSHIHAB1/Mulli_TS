@@ -2,7 +2,7 @@
 import { User } from "./user.model";
 import { Post, Comment } from "../Clubhouse/clubhouse.model";
 import { generateOtp } from "../../utils/otp.util";
-import { sendOTPEmail } from "../../utils/email.util";
+import { sendOtpEmail } from "../../utils/email.util";
 import { redisClient } from "../../config/redis.config";
 import { createUserTokens } from "../../utils/userTokens";
 import mongoose from "mongoose";
@@ -13,7 +13,7 @@ import { fileUploader } from "../../helpers/fileUpload";
 const OTP_EXPIRE = 5 * 60; // 3 minutes
 
 // CREATE / COMPLETE USER PROFILE
- const createUser = async (data: any): Promise<any> => {
+const createUser = async (data: any): Promise<any> => {
   let filter: any = {};
 
   if (data.email) {
@@ -58,13 +58,13 @@ const OTP_EXPIRE = 5 * 60; // 3 minutes
 };
 
 // SIGNUP EMAIL OTP (no pre-existing user required)
- const createSignUpEmailOtp = async (
+const createSignUpEmailOtp = async (
   email: string
 ): Promise<string> => {
   const otp = generateOtp();
 
-  // await sendOtpEmail({ to: email, otp });
-  await sendOTPEmail(email, otp );
+  await sendOtpEmail({ to: email, otp });
+  // await sendOTPEmail(email, otp );
   await redisClient.setex(`otp:email:${email}`, OTP_EXPIRE, otp);
   return otp;
 };
@@ -114,7 +114,7 @@ const verifyEmailOtp = async (
 
     // Check if user already exists with complete profile → LOGIN
     if (user && user.isProfileComplete && user.isEmailVerified) {
-      const tokens = createUserTokens(user.toObject()); 
+      const tokens = createUserTokens(user.toObject());
       return {
         success: true,
         message: "Login successful",
@@ -162,7 +162,7 @@ const verifyEmailOtp = async (
 };
 
 // GENERATE & SEND PHONE OTP
- const createPhoneOtp = async ( phoneNumber: string): Promise<{ message: string }> => {
+const createPhoneOtp = async (phoneNumber: string): Promise<{ message: string }> => {
   const otp = generateOtp();
   const otpKey = `otp:phone:${phoneNumber}`;
 
@@ -176,7 +176,7 @@ const verifyEmailOtp = async (
 };
 
 // VERIFY PHONE OTP 
- const verifyPhoneOtp = async (phone: string,inputOtp: string): Promise<OtpResult> => {
+const verifyPhoneOtp = async (phone: string, inputOtp: string): Promise<OtpResult> => {
   const otpKey = `otp:phone:${phone}`;
   const storedOtp = await redisClient.get(otpKey);
   if (!storedOtp) return { success: false, message: "OTP expired or not found" };
@@ -221,17 +221,17 @@ const verifyEmailOtp = async (
   };
 };
 
-const updateFcmToken = async (userId: string,fcmToken: string): Promise<string[]> => {
+const updateFcmToken = async (userId: string, fcmToken: string): Promise<string[]> => {
   const user = await User.findByIdAndUpdate(
     userId,
     { $addToSet: { fcmTokens: fcmToken } },
-    { new: true, select: "fcmTokens" } 
+    { new: true, select: "fcmTokens" }
   );
 
   return user?.fcmTokens || [];
 };
 
- const blockUserService = async (userId: string, blockedId: string) => {
+const blockUserService = async (userId: string, blockedId: string) => {
   if (userId === blockedId) throw new Error("Cannot block yourself");
 
   const user = await User.findById(userId);
@@ -247,7 +247,7 @@ const updateFcmToken = async (userId: string,fcmToken: string): Promise<string[]
 };
 
 // Unblock a user
- const unblockUserService = async (userId: string, blockedId: string) => {
+const unblockUserService = async (userId: string, blockedId: string) => {
   const user = await User.findById(userId);
   if (!user) throw new Error("User not found");
 
@@ -259,7 +259,7 @@ const updateFcmToken = async (userId: string,fcmToken: string): Promise<string[]
 };
 
 // Get blocked users list
- const getBlockedUsersService = async (userId: string) => {
+const getBlockedUsersService = async (userId: string) => {
   const user = await User.findById(userId).populate(
     "blockedUsers",
     "firstName lastName profileImage"
@@ -349,19 +349,19 @@ const deleteUserService = async (userId: string) => {
   return { success: true, message: "User and their clubhouse data deleted successfully" };
 };
 
-export const userService={
-createUser,
-createEmailOtp,
-verifyEmailOtp,
-createSignUpEmailOtp,
-createPhoneOtp,
-verifyPhoneOtp,
-blockUserService,
-unblockUserService,
-getBlockedUsersService,
-updateUserProfileService,
-updateFcmToken,
-updateUserStatus,
-isBlockedService,
+export const userService = {
+  createUser,
+  createEmailOtp,
+  verifyEmailOtp,
+  createSignUpEmailOtp,
+  createPhoneOtp,
+  verifyPhoneOtp,
+  blockUserService,
+  unblockUserService,
+  getBlockedUsersService,
+  updateUserProfileService,
+  updateFcmToken,
+  updateUserStatus,
+  isBlockedService,
   deleteUserService,
 }
