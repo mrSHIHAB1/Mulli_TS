@@ -4,6 +4,7 @@ import { fileUploader } from "../../helpers/fileUpload";
 import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
 import { postServices } from "./clubhouse.service";
+import { send } from "process";
 
 /* ================= CREATE POST ================= */
 const createPost = catchAsync(async (req: Request, res: Response) => {
@@ -276,6 +277,30 @@ const getCategoryStats = catchAsync(async (req: Request, res: Response) => {
     data: result,
   });
 });
+const followPostType = catchAsync(async (req: Request, res: Response) => {
+  const currentUser: any = (req as any).user;
+  const { postType } = req.body;  
+  const result = await postServices.followPostTypeService(currentUser.id, postType);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: `Followed post type ${postType} successfully`,
+    data: result,
+  });
+});
+
+const unfollowPostType = catchAsync(async (req: Request, res: Response) => {
+  const currentUser: any = (req as any).user;
+  const { postType } = req.body;  
+  const result = await postServices.unfollowPostTypeService(currentUser.id, postType);  
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,  
+    message: `Unfollowed post type ${postType} successfully`,
+    data: result,
+  });
+});
 
 export const postController = {
   createPost,
@@ -292,6 +317,8 @@ export const postController = {
   reportPost,
   toggleCategorySetting,
   getCategorySettings,
-  getCategoryStats
+  getCategoryStats,
+  followPostType,
+  unfollowPostType
 };
 

@@ -22,6 +22,26 @@ const verifyPurchase = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const appleWebhook = async (req: Request, res: Response) => {
+  try {
+    const result = await PaymentService.handleAppleWebhook(req);
+
+    res.status(200).json({
+      success: true,
+      message: "Webhook processed",
+      data: result,
+    });
+  } catch (error: any) {
+    console.error("Webhook Error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message || "Something went wrong",
+    });
+  }
+};
+
 export const PaymentController = { 
-    verifyPurchase
+    verifyPurchase,
+    appleWebhook
  };

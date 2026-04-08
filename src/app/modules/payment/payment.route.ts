@@ -11,4 +11,6 @@ router.post(
   PaymentController.verifyPurchase
 );
 
+router.post("/apple-webhook", PaymentController.appleWebhook);
+
 export const PaymentRoutes = router;

@@ -36,5 +36,9 @@ router.get("/category-setting", checkAuth(...Object.values(Role)), postControlle
 
 router.get("/category-stats", checkAuth(...Object.values(Role)), postController.getCategoryStats);
 
+//follow post type
+router.post("/followpost", checkAuth(...Object.values(Role)), postController.followPostType);
+ router.post("/unfollowpost", checkAuth(...Object.values(Role)), postController.unfollowPostType);
+
 export const clubhouseRoutes = router;
 

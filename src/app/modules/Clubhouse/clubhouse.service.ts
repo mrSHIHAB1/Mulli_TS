@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import mongoose from "mongoose";
-import { Post, Comment, CategorySetting } from "./clubhouse.model";
+import { Post, Comment, CategorySetting, ClubhouseFollow } from "./clubhouse.model";
 import { ReportType, PostCategory } from "./clubhouse.interface ";
 import { NotificationService } from "../notification/notification.service";
 
@@ -442,6 +442,21 @@ export const getCategoryStatsService = async (): Promise<any> => {
 
   return result.sort((a: any, b: any) => b.totalPosts - a.totalPosts);
 };
+export const followPostTypeService = async (userId: string, postType: string): Promise<any> => {
+  const existing = await ClubhouseFollow.findOne({ user: userId, postType });
+
+  if (existing) {
+    throw new Error("You are already following this post type");
+  }
+
+  const result = await ClubhouseFollow.create({ user: userId, postType });
+  return result;
+};
+
+export const unfollowPostTypeService = async (userId: string, postType: string): Promise<any> => {
+  const result = await ClubhouseFollow.deleteOne({ user: userId, postType });
+  return result;
+};
 
 export const postServices = {
   createPostService,
@@ -458,6 +473,9 @@ export const postServices = {
   reportPostService,
   toggleCategorySettingService,
   getCategorySettingsService,
-  getCategoryStatsService
+  getCategoryStatsService,
+  followPostTypeService,
+  unfollowPostTypeService
+
 };
 

@@ -158,26 +158,44 @@ export const discoveryService = async (
         },
       },
     },
-    // Check if user has active Mulli X subscription
+    // Subscription ranking for feed priority
     {
       $lookup: {
         from: "subscriptions",
         localField: "_id",
         foreignField: "userId",
         pipeline: [
-          { $match: { status: "ACTIVE", plan_type: "MULLI_X" } },
-          { $project: { _id: 1 } }
+          { $match: { status: "ACTIVE" } },
+          { $sort: { createdAt: -1 } },
+          { $limit: 1 },
+          { $project: { plan_type: 1 } }
         ],
-        as: "mullixSubscription"
+        as: "activeSubscription"
       }
     },
     {
       $addFields: {
-        hasMullix: { $gt: [{ $size: "$mullixSubscription" }, 0] }
+        subscriptionPlan: { $arrayElemAt: ["$activeSubscription.plan_type", 0] }
       }
     },
     {
-      $sort: { hasMullix: -1, distanceKm: 1 }
+      $addFields: {
+        subscriptionRank: {
+          $switch: {
+            branches: [
+              { case: { $eq: ["$subscriptionPlan", Plan.MULLI_X] }, then: 5 },
+              { case: { $eq: ["$subscriptionPlan", Plan.MULLI_PLUS] }, then: 4 },
+              { case: { $eq: ["$subscriptionPlan", Plan.MULLI_ACE] }, then: 3 },
+              { case: { $eq: ["$subscriptionPlan", Plan.MULLI_BRIDIE] }, then: 2 },
+              { case: { $eq: ["$subscriptionPlan", Plan.MULLI_TRIAL] }, then: 1 }
+            ],
+            default: 0
+          }
+        }
+      }
+    },
+    {
+      $sort: { subscriptionRank: -1, distanceKm: 1 }
     },
     { $limit: 50 },
     {
@@ -189,7 +207,7 @@ export const discoveryService = async (
         __v: 0,
         createdAt: 0,
         updatedAt: 0,
-        mullixSubscription: 0,
+        activeSubscription: 0,
       },
     },
   ];
@@ -213,7 +231,8 @@ export const discoveryService = async (
     religion: u.religion,
     handicaprange: u.handicaprange, 
     tcp:"N/A",
-    hasMullix: u.hasMullix || false
+    hasMullix: u.subscriptionPlan === Plan.MULLI_X,
+    subscriptionType: u.subscriptionPlan || "NONE"
   }));
 
   return transformed;

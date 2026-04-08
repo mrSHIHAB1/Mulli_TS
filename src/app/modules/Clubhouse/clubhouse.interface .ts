@@ -137,3 +137,10 @@ export interface IClubhouseDocument extends IClubhouse, Document {
   createdAt: Date;
   updatedAt: Date;
 }
+
+
+export interface IClubhouseFollow {
+  user: Types.ObjectId;
+  postType: PostCategory;
+  followedAt: Date;
+}

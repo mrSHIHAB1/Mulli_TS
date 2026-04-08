@@ -35,6 +35,7 @@
   "dependencies": {
     "@sendgrid/mail": "^8.1.6",
     "@tsconfig/node16": "^16.1.8",
+    "app-store-server-api": "^0.17.3",
     "axios": "^1.13.6",
     "bcryptjs": "^3.0.3",
     "bullmq": "^5.73.0",

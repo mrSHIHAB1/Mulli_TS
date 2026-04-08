@@ -12,7 +12,9 @@ import {
   ICommentDocument,
   VibeType,
   ReportType,
-  ICategorySetting
+  ICategorySetting,
+ 
+  IClubhouseFollow
 } from "./clubhouse.interface ";
 import { report } from "process";
 
@@ -178,7 +180,15 @@ const categorySettingSchema = new Schema<ICategorySetting>(
   { timestamps: true }
 );
 
-export const CategorySetting: Model<ICategorySetting> =
-  mongoose.model<ICategorySetting>("CategorySetting", categorySettingSchema);
+export const CategorySetting: Model<ICategorySetting> =mongoose.model<ICategorySetting>("CategorySetting", categorySettingSchema);
   
 export default Post;
+
+const clubhouseFollowSchema = new Schema<IClubhouseFollow>({
+  user: { type: Schema.Types.ObjectId, ref: "User", required: true },
+  postType: { type: String, enum: Object.values(PostCategory), required: true },
+  followedAt: { type: Date, default: Date.now }
+});
+
+
+export const ClubhouseFollow = mongoose.model<IClubhouseFollow>("ClubhouseFollow", clubhouseFollowSchema);
