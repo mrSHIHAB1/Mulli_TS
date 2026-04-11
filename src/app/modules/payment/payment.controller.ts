@@ -7,11 +7,11 @@ import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
 
 const verifyPurchase = catchAsync(async (req: Request, res: Response) => {
-  const { userId } = req.user as JwtPayload;
+   const { id} = req.user as JwtPayload;
 
   const result = await PaymentService.verifyPurchase({
     ...req.body,
-    userId,
+    userId: id,
   });
 
   sendResponse(res, {
@@ -21,7 +21,6 @@ const verifyPurchase = catchAsync(async (req: Request, res: Response) => {
     data: result,
   });
 });
-
 const appleWebhook = async (req: Request, res: Response) => {
   try {
     const result = await PaymentService.handleAppleWebhook(req);

@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
-import { AuthProviderType, IsActive, IUser, Role } from "./user.interface";
+import { AuthProviderType, ClubhouseBadge, ClubhouseStatus, IsActive, IUser, Role } from "./user.interface";
 
 
 
@@ -62,7 +62,7 @@ const UserSchema: Schema<IUser> = new Schema(
     },
     hopingToFind: {
       type: String,
-      enum: ["Long_Term", "Casual", "Ethical"],
+      enum: ["Long_Term", "Short_Term", "Casual", "Ethical"],
     },
     ethnicity: { type: String },
     country: { type: String },
@@ -94,6 +94,30 @@ const UserSchema: Schema<IUser> = new Schema(
     reciveNotifications: { type: Boolean, default: true },
     profileImage: { type: String },
     enableFaceId: { type: Boolean, default: false },
+    badgePoints: { type: Number, default: 0 },
+    clubhouseStatus: {
+      type: String,
+      enum: Object.values(ClubhouseStatus),
+      default: ClubhouseStatus.IN_CLUBHOUSE,
+    },
+    lastClubhouseActivity: { type: Date, default: null },
+    clubhouseActiveSince: { type: Date, default: null },
+    clubhouseBadge: {
+      type: String,
+      enum: [...Object.values(ClubhouseBadge), null],
+      default: null,
+    },
+    badgeEarnedAt: { type: Date, default: null },
+    lastDecayAppliedAt: { type: Date, default: null },
+    dailyClubhouseStats: {
+      date: { type: Date },
+      givenPoints: { type: Number, default: 0 },
+      postsCreated: { type: Number, default: 0 },
+      bonusPostsAwarded: { type: Number, default: 0 },
+      likesGiven: { type: Number, default: 0 },
+      strongReactionsGiven: { type: Number, default: 0 },
+      commentsGiven: { type: Number, default: 0 },
+    },
     bio: { type: String },
     languages: [{ type: String }],
     blockedUsers: [{ type: Schema.Types.ObjectId, ref: 'User' }]

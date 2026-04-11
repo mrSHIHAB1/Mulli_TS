@@ -14,9 +14,21 @@ import {
   ReportType,
   ICategorySetting,
  
-  IClubhouseFollow
+  IClubhouseFollow,
+  ReactionType
 } from "./clubhouse.interface ";
 import { report } from "process";
+
+const reactionSchema = new Schema({
+  user: { type: Schema.Types.ObjectId, ref: "User", required: true },
+  type: { type: String, enum: Object.values(ReactionType), required: true },
+});
+
+const reactionCountSchema = new Schema({
+  like: { type: Number, default: 0 },
+  fire: { type: Number, default: 0 },
+  haha: { type: Number, default: 0 },
+}, { _id: false });
 
 const clubhouseSchema = new Schema<IClubhouseDocument>(
   {
@@ -84,8 +96,11 @@ const clubhouseSchema = new Schema<IClubhouseDocument>(
     whatsOnYourMind: { type: String, trim: true },
     media: [String],
     backgroundColor: String,
-    likes: [{ type: Schema.Types.ObjectId, ref: "User" }],
-    likesCount: { type: Number, default: 0 },
+    reactions: [reactionSchema],
+    reactionCount: {
+      type: reactionCountSchema,
+      default: () => ({ like: 0, fire: 0, haha: 0 })
+    },
     commentsCount: { type: Number, default: 0 },
     gifts: [
       {
@@ -101,6 +116,7 @@ const clubhouseSchema = new Schema<IClubhouseDocument>(
     reportedAt: { type: Date, default: Date.now },
   }
 ],
+  milestoneAwarded: { type: Boolean, default: false },
   },
   {
     timestamps: true,
@@ -136,15 +152,10 @@ const commentSchema = new Schema<ICommentDocument>(
       ref: "Comment",
       default: null,
     },
-    likes: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "User",
-      },
-    ],
-    likesCount: {
-      type: Number,
-      default: 0,
+    reactions: [reactionSchema],
+    reactionCount: {
+      type: reactionCountSchema,
+      default: () => ({ like: 0, fire: 0, haha: 0 })
     },
   },
   {

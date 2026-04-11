@@ -64,7 +64,23 @@ export enum ReportType {
   UNDERAGE= "UNDERAGE",
   NOT_INTERESTED = "NOT_INTERESTED",
 }
+
+export enum ReactionType {
+  LIKE = "like",
+  FIRE = "fire",
+  HAHA = "haha",
+}
 // --- SUB-INTERFACES ---
+export interface IReaction {
+  user: Types.ObjectId;
+  type: ReactionType;
+}
+
+export interface IReactionCount {
+  like: number;
+  fire: number;
+  haha: number;
+}
 export interface IVibe {
   music?: boolean;
   beerCart?: boolean;
@@ -94,8 +110,8 @@ export interface IComment {
   post: Types.ObjectId;
   text: string;
   parentId?: Types.ObjectId;
-  likes: Types.ObjectId[];
-  likesCount: number;
+  reactions: IReaction[];
+  reactionCount: IReactionCount;
 }
 
 export interface ICommentDocument extends IComment, Document {
@@ -121,8 +137,8 @@ export interface IClubhouse {
   visibility: Visibility;
   whatsOnYourMind?: string;
   media: string[];
-  likes: Types.ObjectId[];
-  likesCount: number;
+  reactions: IReaction[];
+  reactionCount: IReactionCount;
   commentsCount: number;
   gifts: {
     user: Types.ObjectId;
@@ -131,6 +147,7 @@ export interface IClubhouse {
   }[];
   backgroundColor?: string;
   reports: IReport[];
+  milestoneAwarded?: boolean;
 }
 
 export interface IClubhouseDocument extends IClubhouse, Document {

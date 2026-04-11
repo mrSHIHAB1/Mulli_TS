@@ -152,24 +152,9 @@ const getMe = async (authUser: any): Promise<any> => {
     throw new Error("User not found");
   }
 
-  const {
-    _id,
-    email: userEmail,
-    firstName,
-    profileImage,
-    isProfileComplete,
-    phone,
-    location,
-  } = user.toObject();
 
   return {
-    id: _id,
-    email: userEmail,
-    firstName,
-    profileImage,
-    isProfileComplete,
-    phone,
-    location,
+   user
   };
 };
 

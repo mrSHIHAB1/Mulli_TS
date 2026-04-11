@@ -28,6 +28,28 @@ export interface IAuthProvider {
 
 // This should reflect the fields we actually use in services, auth, and passport.
 // It's intentionally permissive (many fields optional) to avoid blocking on strict typing.
+export enum ClubhouseStatus {
+  IN_CLUBHOUSE = "In the Clubhouse",
+  COOLING_DOWN = "Cooling Down",
+  CHECKED_OUT = "Checked Out",
+}
+
+export enum ClubhouseBadge {
+  CLUBHOUSE_CHAMPION = "Clubhouse Champion",
+  LOCAL_LEGEND = "Local Legend",
+  RISING_STAR = "Rising Star",
+}
+
+export interface IDailyClubhouseStats {
+  date: Date;
+  givenPoints: number;
+  postsCreated: number;
+  bonusPostsAwarded: number;
+  likesGiven: number;
+  strongReactionsGiven: number;
+  commentsGiven: number;
+}
+
 export interface IUser {
     _id?: Types.ObjectId;
   email?: string;
@@ -57,7 +79,7 @@ export interface IUser {
   trackactivity?: "Once" | "While_Using" | "No";
   gender?: "Men" | "Women" | "Nonbinary" | "ALL";
   genderPreference?: "Men" | "Women" | "Nonbinary" | "ALL";
-  hopingToFind?: "Long_Term" | "Casual" | "Ethical";
+  hopingToFind?: "Long_Term" | "Short_Term" | "Casual" | "Ethical";
   ethnicity?: string;
   country?: string;
   religion?: string;
@@ -90,7 +112,15 @@ export interface IUser {
   reciveNotifications?: boolean;
   profileImage?: string;
   enableFaceId?: boolean;
+  badgePoints?: number;
   blockedUsers: Types.ObjectId[];
   coins?: number;
+  clubhouseStatus?: ClubhouseStatus;
+  lastClubhouseActivity?: Date;
+  clubhouseActiveSince?: Date;
+  clubhouseBadge?: ClubhouseBadge | null;
+  badgeEarnedAt?: Date | null;
+  dailyClubhouseStats?: IDailyClubhouseStats;
+  lastDecayAppliedAt?: Date | null;
 }
 

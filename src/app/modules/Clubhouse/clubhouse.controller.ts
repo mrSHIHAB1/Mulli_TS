@@ -71,15 +71,18 @@ const likePost = catchAsync(async (req: Request, res: Response) => {
     throw new Error("Authenticated user required to like a post");
   }
 
-  const result = await postServices.likePostService(
+  const { reactionType } = req.body;
+
+  const result = await postServices.reactPostService(
     currentUser,
-    req.params.id as string
+    req.params.id as string,
+    reactionType
   );
 
   sendResponse(res, {
     success: true,
     statusCode: 200,
-    message: "Post liked successfully!",
+    message: "Post reacted successfully!",
     data: result,
   });
 });
@@ -128,15 +131,18 @@ const likeComment = catchAsync(async (req: Request, res: Response) => {
     throw new Error("Authenticated user required to like a comment");
   }
 
-  const result = await postServices.likeCommentService(
+  const { reactionType } = req.body;
+
+  const result = await postServices.reactCommentService(
     currentUser.id,
-    req.params.commentId as string
+    req.params.commentId as string,
+    reactionType
   );
 
   sendResponse(res, {
     success: true,
     statusCode: 200,
-    message: "Comment liked successfully!",
+    message: "Comment reacted successfully!",
     data: result,
   });
 });
@@ -301,6 +307,38 @@ const unfollowPostType = catchAsync(async (req: Request, res: Response) => {
     data: result,
   });
 });
+const superlikePost = catchAsync(async (req: Request, res: Response) => {
+  const currentUser: any = (req as any).user;
+  if (!currentUser?.id) {
+    throw new Error("Authenticated user required to like a post");
+  }
+
+  const { reactionType } = req.body;
+
+  const result = await postServices.reactPostService(
+    currentUser,
+    req.params.id as string,
+    reactionType
+  );
+
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "Post reacted successfully!",
+    data: result,
+  });
+});
+const getClubhouseProfile = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.params.userId as string;
+  const result = await postServices.getClubhouseProfileService(userId);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "Clubhouse profile fetched successfully",
+    data: result,
+  });
+});
 
 export const postController = {
   createPost,
@@ -319,6 +357,7 @@ export const postController = {
   getCategorySettings,
   getCategoryStats,
   followPostType,
-  unfollowPostType
+  unfollowPostType,
+  getClubhouseProfile,
 };
 

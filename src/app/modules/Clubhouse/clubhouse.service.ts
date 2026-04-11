@@ -1,8 +1,19 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import mongoose from "mongoose";
 import { Post, Comment, CategorySetting, ClubhouseFollow } from "./clubhouse.model";
-import { ReportType, PostCategory } from "./clubhouse.interface ";
+import { ReportType, PostCategory, ReactionType } from "./clubhouse.interface ";
 import { NotificationService } from "../notification/notification.service";
+import {
+  onPostCreated,
+  onPostDeleted,
+  onReactionGiven,
+  onCommentCreated,
+  onCommentDeleted,
+  onReplyCreated,
+  onReplyDeleted,
+  checkCommentMilestone,
+  getClubhouseProfile,
+} from "./clubhouse.points";
 
 const getReplies = async (commentId: string): Promise<any[]> => {
   const replies = await Comment.find({ parentId: commentId })
@@ -36,6 +47,9 @@ export const createPostService = async (
     author: userId,
   });
 
+  // Award points for post creation
+  await onPostCreated(userId);
+
   return post;
 };
 
@@ -48,49 +62,63 @@ export const getHomeFeedService = async (): Promise<any[]> => {
   return posts;
 };
 
-export const likePostService = async (
+export const reactPostService = async (
   user: any,
-  postId: string
-): Promise<{ totalLikes: number; liked: boolean }> => {
+  postId: string,
+  reactionType: ReactionType = ReactionType.LIKE
+): Promise<{ reactionCount: any; reacted: boolean }> => {
 
   const post = await Post.findById(postId);
   if (!post) throw new Error("Post not found");
 
   const userId = user.id.toString();
 
-  const alreadyLiked = post.likes.some(
-    (id: any) => id.toString() === userId
+  if (!post.reactionCount) {
+    post.reactionCount = { like: 0, fire: 0, haha: 0 };
+  }
+
+  const existingReactionIndex = post.reactions.findIndex(
+    (r: any) => r.user.toString() === userId
   );
 
-  let updatedPost;
+  let reacted = false;
+  let oldReactionType: ReactionType | null = null;
+  let newReactionType: ReactionType | null = null;
 
-  if (alreadyLiked) {
+  if (existingReactionIndex !== -1) {
+    const existingReaction = post.reactions[existingReactionIndex];
+    const oldType = existingReaction.type;
+    oldReactionType = oldType;
 
-    updatedPost = await Post.findByIdAndUpdate(
-      postId,
-      {
-        $pull: { likes: userId },
-        $inc: { likesCount: -1 }
-      },
-      { new: true }
-    );
+    // Remove old reaction count
+    (post.reactionCount as any)[oldType] = Math.max(0, (post.reactionCount as any)[oldType] - 1);
+
+    if (oldType === reactionType) {
+      // Toggle off
+      post.reactions.splice(existingReactionIndex, 1);
+      reacted = false;
+      newReactionType = null;
+    } else {
+      // Change reaction type
+      existingReaction.type = reactionType;
+      (post.reactionCount as any)[reactionType] = ((post.reactionCount as any)[reactionType] || 0) + 1;
+      reacted = true;
+      newReactionType = reactionType;
+    }
   } else {
-
-    updatedPost = await Post.findByIdAndUpdate(
-      postId,
-      {
-        $addToSet: { likes: userId },
-        $inc: { likesCount: 1 }
-      },
-      { new: true }
-    );
-  }
-  if (updatedPost!.likesCount < 0) {
-    updatedPost!.likesCount = 0;
-    await updatedPost!.save();
+    // New reaction
+    post.reactions.push({ user: new mongoose.Types.ObjectId(userId), type: reactionType } as any);
+    (post.reactionCount as any)[reactionType] = ((post.reactionCount as any)[reactionType] || 0) + 1;
+    reacted = true;
+    newReactionType = reactionType;
+    oldReactionType = null;
   }
 
-  if (!alreadyLiked) {
+  await post.save();
+
+  const postAuthorId = post.author.toString();
+
+  if (reacted) {
     const postWithAuthor = await Post.findById(postId).populate("author");
     if (postWithAuthor && postWithAuthor.author) {
       await NotificationService.notifyPostLiked(
@@ -102,9 +130,12 @@ export const likePostService = async (
     }
   }
 
+  // Award or deduct points based on old/new reaction state
+  await onReactionGiven(userId, postAuthorId, newReactionType, oldReactionType);
+
   return {
-    totalLikes: updatedPost!.likesCount,
-    liked: !alreadyLiked,
+    reactionCount: post.reactionCount,
+    reacted,
   };
 };
 
@@ -115,33 +146,29 @@ export const createCommentService = async (
 ): Promise<any> => {
   const { text } = payload;
 
-  const isPostExist = await Post.findById(postId);
-  if (!isPostExist) {
-    throw new Error("Post not found");
-  }
+  // Single query: increment count and get updated post with author in one shot
+  const updatedPost = await Post.findByIdAndUpdate(
+    postId,
+    { $inc: { commentsCount: 1 } },
+    { new: true }
+  ).populate("author");
 
-  const result = await Comment.create({
-    user: userId,
-    post: postId,
-    text,
+  if (!updatedPost) throw new Error("Post not found");
 
-  });
+  const result = await Comment.create({ user: userId, post: postId, text });
 
-  // Increment comment count in Post
-  await Post.findByIdAndUpdate(postId, {
-    $inc: { commentsCount: 1 },
-  });
-
-  const postWithAuthor = await Post.findById(postId).populate("author");
-  if (postWithAuthor && postWithAuthor.author) {
-    // We need to get the sender's name. We can find the user.
+  if (updatedPost.author) {
+    const postAuthorId = (updatedPost.author as any)._id.toString();
     const sender = await mongoose.model("User").findById(userId);
     await NotificationService.notifyPostCommented(
-      (postWithAuthor.author as any)._id.toString(),
+      postAuthorId,
       userId,
       sender?.firstName || sender?.name || "Someone",
       postId
     );
+
+    await onCommentCreated(userId, postAuthorId, postId);
+    await checkCommentMilestone(postAuthorId, updatedPost.commentsCount, postId);
   }
 
   return result;
@@ -170,9 +197,10 @@ export const getCommentsByPostService = async (postId: string): Promise<any[]> =
   return result;
 };
 
-export const likeCommentService = async (
+export const reactCommentService = async (
   userId: string,
-  commentId: string
+  commentId: string,
+  reactionType: ReactionType = ReactionType.LIKE
 ): Promise<any> => {
 
   const comment = await Comment.findById(commentId);
@@ -180,33 +208,51 @@ export const likeCommentService = async (
   if (!comment) {
     throw new Error("Comment not found");
   }
-  const userObjectId = new mongoose.Types.ObjectId(userId);
-  const isLiked = comment.likes.some((id) => id.equals(userObjectId));
 
-  let updatedComment;
-
-  if (isLiked) {
-    updatedComment = await Comment.findByIdAndUpdate(
-      commentId,
-      {
-        $pull: { likes: userObjectId },
-        $inc: { likesCount: -1 },
-      },
-      { new: true }
-    ).populate("user", "name profileImage");
-  } else {
-
-    updatedComment = await Comment.findByIdAndUpdate(
-      commentId,
-      {
-        $addToSet: { likes: userObjectId },
-        $inc: { likesCount: 1 },
-      },
-      { new: true }
-    ).populate("user", "name profileImage");
+  if (!comment.reactionCount) {
+    comment.reactionCount = { like: 0, fire: 0, haha: 0 };
   }
 
-  return updatedComment;
+  const existingReactionIndex = comment.reactions.findIndex(
+    (r: any) => r.user.toString() === userId
+  );
+
+  let oldReactionType: ReactionType | null = null;
+  let newReactionType: ReactionType | null = null;
+
+  if (existingReactionIndex !== -1) {
+    const existingReaction = comment.reactions[existingReactionIndex];
+    const oldType = existingReaction.type;
+    oldReactionType = oldType;
+
+    // Remove old reaction count
+    (comment.reactionCount as any)[oldType] = Math.max(0, (comment.reactionCount as any)[oldType] - 1);
+
+    if (oldType === reactionType) {
+      // Toggle off
+      comment.reactions.splice(existingReactionIndex, 1);
+      newReactionType = null;
+    } else {
+      // Change reaction type
+      existingReaction.type = reactionType;
+      (comment.reactionCount as any)[reactionType] = ((comment.reactionCount as any)[reactionType] || 0) + 1;
+      newReactionType = reactionType;
+    }
+  } else {
+    // New reaction
+    comment.reactions.push({ user: new mongoose.Types.ObjectId(userId), type: reactionType } as any);
+    (comment.reactionCount as any)[reactionType] = ((comment.reactionCount as any)[reactionType] || 0) + 1;
+    newReactionType = reactionType;
+    oldReactionType = null;
+  }
+
+  await comment.save();
+
+  // Award or deduct points based on old/new reaction state
+  const commentAuthorId = comment.user.toString();
+  await onReactionGiven(userId, commentAuthorId, newReactionType, oldReactionType);
+
+  return comment.populate("user", "name profileImage");
 };
 
 export const sendGiftService = async (
@@ -249,6 +295,14 @@ export const replyToCommentService = async (
   await Comment.findByIdAndUpdate(commentId, {
     $inc: { replyCount: 1 },
   });
+
+  // Award points for reply
+  await onReplyCreated(
+    userId,
+    parentComment.user.toString(),
+    parentComment.post.toString()
+  );
+
   return reply;
 };
 
@@ -277,6 +331,9 @@ export const deletePostService = async (
     throw new Error("You are not authorized to delete this post");
   }
 
+  // Reverse post-creation points before deletion
+  await onPostDeleted(userId);
+
   // Delete all comments associated with the post
   await Comment.deleteMany({ post: postId });
 
@@ -297,16 +354,33 @@ export const deleteCommentService = async (
     throw new Error("You are not authorized to delete this comment");
   }
 
-  // If it's a reply, decrement replyCount of parent
+  const postId = comment.post.toString();
+  const commenterId = comment.user.toString();
+
   if (comment.parentId) {
+    // It's a reply — reverse reply points before deletion
+    const parentComment = await Comment.findById(comment.parentId);
+    if (parentComment) {
+      await onReplyDeleted(commenterId, parentComment.user.toString(), postId);
+    }
     await Comment.findByIdAndUpdate(comment.parentId, {
       $inc: { replyCount: -1 },
     });
   } else {
-    // If it's a top-level comment, decrement commentsCount of post
-    await Post.findByIdAndUpdate(comment.post, {
-      $inc: { commentsCount: -1 },
-    });
+    // It's a top-level comment
+    // First reverse points for all replies that will be bulk-deleted
+    const replies = await Comment.find({ parentId: commentId });
+    for (const reply of replies) {
+      await onReplyDeleted(reply.user.toString(), commenterId, postId);
+    }
+
+    // Reverse the comment's own points
+    const post = await Post.findById(postId);
+    if (post) {
+      await onCommentDeleted(commenterId, post.author.toString(), postId);
+    }
+
+    await Post.findByIdAndUpdate(postId, { $inc: { commentsCount: -1 } });
   }
 
   // Delete all replies if any
@@ -458,15 +532,21 @@ export const unfollowPostTypeService = async (userId: string, postType: string):
   return result;
 };
 
+export const getClubhouseProfileService = async (userId: string): Promise<any> => {
+  return getClubhouseProfile(userId);
+};
+
+
+
 export const postServices = {
   createPostService,
   getHomeFeedService,
   getPostByIdService,
-  likePostService,
+  reactPostService,
   sendGiftService,
   createCommentService,
   getCommentsByPostService,
-  likeCommentService,
+  reactCommentService,
   replyToCommentService,
   deletePostService,
   deleteCommentService,
@@ -475,7 +555,7 @@ export const postServices = {
   getCategorySettingsService,
   getCategoryStatsService,
   followPostTypeService,
-  unfollowPostTypeService
-
+  unfollowPostTypeService,
+  getClubhouseProfileService,
 };
 

@@ -7,6 +7,7 @@ import { initFirebase } from "./app/config/firebase.config";
 import { setIo } from "./app/modules/socket/socket.store";
 import { initSockets } from "./app/modules/socket/socket";
 import { Server as SocketIoServer } from "socket.io";
+import { startClubhouseDecayCron } from "./app/crons/clubhouse.cron";
 // import { closeAllWorkers } from "./app/workers";
 // import { ensureBullMQRedisPolicy } from "./app/config/bullmq.config";
 
@@ -34,9 +35,10 @@ const startServer = async () => {
     console.log("Connected to Database");
     // await ensureBullMQRedisPolicy();
 
+    startClubhouseDecayCron();
+
     server.listen(envVars.PORT, () => {
       console.log(`Server is listening on port ${envVars.PORT}`);
-      // console.log("[BullMQ] Workers started");
     });
 
   } catch (error) {

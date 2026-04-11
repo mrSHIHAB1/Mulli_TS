@@ -69,6 +69,7 @@ EMAIL_FROM: string;
   FRONTEND_URL: string;
    twilio: TWILIO_TYPE;
    FIREBASE_SERVICE_ACCOUNT_PATH: string;
+   APPLE_SHARED_SECRET: string;
 }
 
 const loadEnvVariables = (): EnvConfig => {
@@ -106,6 +107,7 @@ const loadEnvVariables = (): EnvConfig => {
      "SENDGRID_API_KEY",
 "SENDGRID_TEMPLATE_ID",
 "EMAIL_FROM",
+"APPLE_SHARED_SECRET",
   ];
 
   requiredEnvVariables.forEach((key) => {
@@ -169,6 +171,7 @@ EMAIL_FROM: process.env.EMAIL_FROM as string,
       APPLE_SHARED_SECRET: process.env.APPLE_SHARED_SECRET as string,
     },
     FRONTEND_URL: process.env.FRONTEND_URL as string,
+    APPLE_SHARED_SECRET: process.env.APPLE_SHARED_SECRET as string,
    twilio: {
   accountSid: process.env.TWILIO_ACCOUNT_SID as string,
   authToken: process.env.TWILIO_AUTH_TOKEN as string,

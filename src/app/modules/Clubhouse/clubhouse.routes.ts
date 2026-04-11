@@ -40,5 +40,8 @@ router.get("/category-stats", checkAuth(...Object.values(Role)), postController.
 router.post("/followpost", checkAuth(...Object.values(Role)), postController.followPostType);
  router.post("/unfollowpost", checkAuth(...Object.values(Role)), postController.unfollowPostType);
 
+// Clubhouse points & badge profile
+router.get("/profile/:userId", checkAuth(...Object.values(Role)), postController.getClubhouseProfile);
+
 export const clubhouseRoutes = router;
 
