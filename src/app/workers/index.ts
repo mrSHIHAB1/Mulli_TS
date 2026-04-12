@@ -4,6 +4,7 @@ import { QUEUE_NAMES } from "../queues";
 import { NotificationService } from "../modules/notification/notification.service";
 import Subscription from "../modules/subscription/subscription.model";
 import { SubscriptionStatus } from "../modules/subscription/subscription.interface";
+import { invalidateUserSubscriptionCache } from "../helpers/redisCache.helper";
 
 
 // -------------------------------------------------------
@@ -78,12 +79,16 @@ notificationWorker.on("failed", (job, err) => {
 export const subscriptionExpiryWorker = new Worker(
   QUEUE_NAMES.SUBSCRIPTION_EXPIRY,
   async (job: Job) => {
-    const { subscriptionId } = job.data;
+    const { subscriptionId, userId } = job.data;
     console.log(`[SubExpiryWorker] Processing job ${job.id} for subscription ${subscriptionId}`);
 
     await Subscription.findByIdAndUpdate(subscriptionId, {
       status: SubscriptionStatus.EXPIRED,
     });
+
+    if (userId) {
+      await invalidateUserSubscriptionCache(userId);
+    }
 
     console.log(`[SubExpiryWorker] Subscription ${subscriptionId} marked as EXPIRED`);
   },

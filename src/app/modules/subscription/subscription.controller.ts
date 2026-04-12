@@ -92,7 +92,7 @@ const createTrialSubscription = catchAsync(async (req: Request, res: Response) =
     // Optional: prevent duplicate trial
     const existingTrial = await Subscription.findOne({
         userId,
-        plan_type: Plan.MULLI_TRIAL,
+        plan_type: Plan.FREE,
     });
 
     if (existingTrial) {
@@ -105,12 +105,12 @@ const createTrialSubscription = catchAsync(async (req: Request, res: Response) =
     const result = await SubscriptionService.createSubscription({
         userId,
         status: SubscriptionStatus.ACTIVE,
-        plan_type: Plan.MULLI_TRIAL,
+        plan_type: Plan.FREE,
         platform, // "ios" or "android"
 
-        productId: "trial_plan",
-        transactionId: `trial_${userId}_${Date.now()}`, // unique
-        originalTransactionId: `trial_${userId}`,
+        productId: "free_plan",
+        transactionId: `free_${userId}_${Date.now()}`, // unique
+        originalTransactionId: `free_${userId}`,
 
         start_date: startDate,
         end_date: endDate,

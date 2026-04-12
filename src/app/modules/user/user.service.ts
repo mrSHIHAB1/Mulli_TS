@@ -9,6 +9,8 @@ import mongoose from "mongoose";
 import { sendOTP } from "../../config/twillio.config";
 import getPlaceNameGoogle from "../../utils/getGoogleLocation";
 import { fileUploader } from "../../helpers/fileUpload";
+import { SubscriptionService } from "../subscription/subscription.service";
+import { Plan } from "../subscription/subscription.interface";
 
 const OTP_EXPIRE = 5 * 60; // 3 minutes
 
@@ -300,13 +302,52 @@ const updateUserProfileService = async (
 
   // Handle location if lat/lng provided
   if (bodyData.lat && bodyData.lng) {
+    const user = await User.findById(userId);
+    if (!user) throw new Error("User not found");
+
+    const mySubscription = await SubscriptionService.getMySubscription(userId);
+    const plan = mySubscription?.plan_type as Plan;
+
+    let limit = 0;
+    if (plan === Plan.ACE) limit = Infinity;
+    else if (plan === Plan.EAGLE) limit = 5;
+    else if (plan === Plan.BIRDIE) limit = 2;
+    // else 0 (Free)
+
+    // We only restrict changes IF the user has already completed their profile setup
+    if (user.isProfileComplete) {
+      if (limit === 0) {
+        throw new Error("Location changes are not allowed for Free users. Upgrade to Birdie, Eagle, or Ace.");
+      }
+
+      const now = new Date();
+      const lastReset = user.lastLocationChangeResetDate || new Date(0);
+      const isNewMonth = 
+        now.getMonth() !== lastReset.getMonth() || 
+        now.getFullYear() !== lastReset.getFullYear();
+
+      let usedThisMonth = user.locationChangesUsedThisMonth || 0;
+
+      if (isNewMonth) {
+        usedThisMonth = 0;
+        updateData.lastLocationChangeResetDate = now;
+      }
+
+      if (usedThisMonth >= limit && limit !== Infinity) {
+        throw new Error(`Monthly location change limit reached (${limit}). Upgrade for more.`);
+      }
+
+      updateData.locationChangesUsedThisMonth = usedThisMonth + 1;
+      updateData.lastLocationChangeResetDate = isNewMonth ? now : lastReset;
+    }
+
     const lat = parseFloat(bodyData.lat);
     const lng = parseFloat(bodyData.lng);
     const placeName = await getPlaceNameGoogle(lat, lng);
 
     updateData.location = {
       type: "Point",
-      coordinates: [lng, lat], // GeoJSON format
+      coordinates: [lng, lat],
       placeName,
     };
   }
@@ -349,6 +390,51 @@ const deleteUserService = async (userId: string) => {
   return { success: true, message: "User and their clubhouse data deleted successfully" };
 };
 
+const activateBoost = async (userId: string) => {
+  const user = await User.findById(userId);
+  if (!user) throw new Error("User not found");
+
+  const mySubscription = await SubscriptionService.getMySubscription(userId);
+  if (!mySubscription) throw new Error("Active subscription required to boost profile");
+
+  const plan = mySubscription.plan_type as Plan;
+  
+  let boostLimit = 0;
+  if (plan === Plan.EAGLE) {
+    boostLimit = 2;
+  } else if (plan === Plan.BIRDIE) {
+    boostLimit = 1;
+  } else if (plan === Plan.ACE) {
+    throw new Error("Ace members are already prioritized at the top of the feed");
+  } else {
+    throw new Error("Boosting is not available for your current plan");
+  }
+
+  const now = new Date();
+  
+  // Reset monthly counter if it's a new month
+  const lastReset = user.lastBoostResetDate || new Date(0);
+  const isNewMonth = 
+    now.getMonth() !== lastReset.getMonth() || 
+    now.getFullYear() !== lastReset.getFullYear();
+
+  if (isNewMonth) {
+    user.boostsUsedThisMonth = 0;
+    user.lastBoostResetDate = now;
+  }
+
+  if ((user.boostsUsedThisMonth || 0) >= boostLimit) {
+    throw new Error(`You have used your ${boostLimit} monthly boost(s).`);
+  }
+
+  // Activate boost for 30 minutes
+  user.boostedUntil = new Date(now.getTime() + 30 * 60 * 1000);
+  user.boostsUsedThisMonth = (user.boostsUsedThisMonth || 0) + 1;
+
+  await user.save();
+  return user;
+};
+
 export const userService = {
   createUser,
   createEmailOtp,
@@ -364,4 +450,5 @@ export const userService = {
   updateUserStatus,
   isBlockedService,
   deleteUserService,
+  activateBoost,
 }

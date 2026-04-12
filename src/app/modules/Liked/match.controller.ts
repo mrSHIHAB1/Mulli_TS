@@ -63,7 +63,7 @@ export const getMyMatches = catchAsync(async (req: Request, res: Response) => {
   const activeSubs = await Subscription.find({
     userId: { $in: userIds },
     status: "ACTIVE",
-    plan_type: Plan.MULLI_X
+    plan_type: { $in: [Plan.ACE, Plan.EAGLE] }
   }).select("userId");
 
   const privilegedUserIds = new Set(activeSubs.map(s => s.userId.toString()));

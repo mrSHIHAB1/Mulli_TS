@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Types } from "mongoose";
 import User from "../user/user.model";
-import { Role } from "../user/user.interface";
+import { ClubhouseBadge, Role } from "../user/user.interface";
 import { Notification } from "./notification.model";
 import { INotificationData, NotificationType } from "./notification.interface";
 import { getIo } from "../socket/socket.store";
@@ -412,6 +412,79 @@ const notifyPostCommented = async (
   return { inAppCount: saved.length };
 };
 
+const BADGE_EARNED_MESSAGES: Record<ClubhouseBadge, { title: string; body: string }> = {
+  [ClubhouseBadge.RISING_STAR]: {
+    title: "Rising Star",
+    body: "You're now a Rising Star ⭐Check out your first badge!",
+  },
+  [ClubhouseBadge.LOCAL_LEGEND]: {
+    title: "Local Legend",
+    body: "You're now a Local Legend ⛳️Check our your new badge!",
+  },
+  [ClubhouseBadge.CLUBHOUSE_CHAMPION]: {
+    title: "Clubhouse Champion",
+    body: "You're now a Clubhouse Champion🏆 Check out your trophy badge!",
+  },
+};
+
+const notifyBadgeEarned = async (userId: string, badge: ClubhouseBadge) => {
+  const msg = BADGE_EARNED_MESSAGES[badge];
+  if (!msg) return;
+
+  const receiverObjectId = new Types.ObjectId(userId);
+  const data: INotificationData = { badge };
+
+  const saved = await createInApp([receiverObjectId], NotificationType.BADGE_EARNED, msg.title, msg.body, data);
+  await pushToUserIds([receiverObjectId], msg.title, msg.body, data);
+  emitNotification([receiverObjectId], { type: NotificationType.BADGE_EARNED, title: msg.title, body: msg.body, data });
+
+  return { inAppCount: saved.length };
+};
+
+const BADGE_PROXIMITY_MESSAGES: Record<ClubhouseBadge, string> = {
+  [ClubhouseBadge.RISING_STAR]:
+    "Your Rising Star badge is just around the corner. A little more activity gets you there!⛳️",
+  [ClubhouseBadge.LOCAL_LEGEND]:
+    "Your Local Legend badge is just around the corner. A little more activity gets you there!⛳️",
+  [ClubhouseBadge.CLUBHOUSE_CHAMPION]:
+    "Your Clubhouse Champion badge is just around the corner. A little more activity gets you there!⛳️",
+};
+
+const notifyBadgeProximity = async (userId: string, targetBadge: ClubhouseBadge) => {
+  const body = BADGE_PROXIMITY_MESSAGES[targetBadge];
+  if (!body) return;
+
+  const title = "Badge within reach!";
+  const receiverObjectId = new Types.ObjectId(userId);
+  const data: INotificationData = { targetBadge };
+
+  const saved = await createInApp([receiverObjectId], NotificationType.BADGE_PROXIMITY, title, body, data);
+  await pushToUserIds([receiverObjectId], title, body, data);
+  emitNotification([receiverObjectId], { type: NotificationType.BADGE_PROXIMITY, title, body, data });
+
+  return { inAppCount: saved.length };
+};
+
+/**
+ * Send an inactivity or badge-downgrade-warning notification.
+ * Caller is responsible for rate-limit checks before calling this.
+ */
+const notifyClubhouseSystem = async (
+  userId: string,
+  type: NotificationType.CLUBHOUSE_INACTIVITY | NotificationType.BADGE_DOWNGRADE_WARNING,
+  title: string,
+  body: string,
+  data?: INotificationData,
+) => {
+  const receiverObjectId = new Types.ObjectId(userId);
+
+  const saved = await createInApp([receiverObjectId], type, title, body, data);
+  await pushToUserIds([receiverObjectId], title, body, data);
+  emitNotification([receiverObjectId], { type, title, body, data });
+
+  return { inAppCount: saved.length };
+};
+
 export const NotificationService = {
   notifyAdminsFeedbackSubmitted,
   notifyChatMessage,
@@ -425,4 +498,7 @@ export const NotificationService = {
   notifyPostLiked,
   notifyPostCommented,
   sendTestPush,
+  notifyBadgeEarned,
+  notifyBadgeProximity,
+  notifyClubhouseSystem,
 };

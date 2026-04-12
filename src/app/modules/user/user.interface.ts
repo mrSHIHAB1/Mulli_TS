@@ -50,6 +50,12 @@ export interface IDailyClubhouseStats {
   commentsGiven: number;
 }
 
+export interface IBadgeProximityNotified {
+  risingstar: boolean;
+  locallegend: boolean;
+  clubhousechampion: boolean;
+}
+
 export interface IUser {
     _id?: Types.ObjectId;
   email?: string;
@@ -122,5 +128,16 @@ export interface IUser {
   badgeEarnedAt?: Date | null;
   dailyClubhouseStats?: IDailyClubhouseStats;
   lastDecayAppliedAt?: Date | null;
+  lastInactivityNotificationAt?: Date | null;
+  badgeProximityNotified?: IBadgeProximityNotified;
+
+  // Boost fields
+  boostedUntil?: Date | null;
+  boostsUsedThisMonth?: number;
+  lastBoostResetDate?: Date | null;
+
+  // Location change fields
+  locationChangesUsedThisMonth?: number;
+  lastLocationChangeResetDate?: Date | null;
 }
 

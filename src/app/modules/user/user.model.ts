@@ -118,9 +118,24 @@ const UserSchema: Schema<IUser> = new Schema(
       strongReactionsGiven: { type: Number, default: 0 },
       commentsGiven: { type: Number, default: 0 },
     },
+    lastInactivityNotificationAt: { type: Date, default: null },
+    badgeProximityNotified: {
+      risingstar: { type: Boolean, default: false },
+      locallegend: { type: Boolean, default: false },
+      clubhousechampion: { type: Boolean, default: false },
+    },
     bio: { type: String },
     languages: [{ type: String }],
-    blockedUsers: [{ type: Schema.Types.ObjectId, ref: 'User' }]
+    blockedUsers: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+
+    // Boost fields
+    boostedUntil: { type: Date, default: null },
+    boostsUsedThisMonth: { type: Number, default: 0 },
+    lastBoostResetDate: { type: Date, default: null },
+
+    // Location change fields
+    locationChangesUsedThisMonth: { type: Number, default: 0 },
+    lastLocationChangeResetDate: { type: Date, default: null },
   },
   { timestamps: true }
 );

@@ -91,11 +91,17 @@ export const discoveryService = async (
 
   // PREMIUM check
   const mySubscription = await SubscriptionService.getMySubscription(authUser.id);
-  const isPremium = mySubscription && [Plan.MULLI_PLUS, Plan.MULLI_X].includes(mySubscription.plan_type as Plan);
+  const plan = mySubscription?.plan_type as Plan;
 
-  const hasPremiumFilters = filters.minPhotos !== undefined ||
-    filters.hasBio !== undefined ||
-    filters.minHeight !== undefined ||
+  const isAceOrEagle = mySubscription && [Plan.ACE, Plan.EAGLE].includes(plan);
+  const isBirdie = mySubscription && plan === Plan.BIRDIE;
+  const isPremium = isAceOrEagle || isBirdie;
+
+  // Filters Birdie can use
+  const hasBirdieFilters = filters.hasBio !== undefined || filters.minHeight !== undefined;
+
+  // Filters ONLY Ace/Eagle can use
+  const hasTopTierFilters = filters.minPhotos !== undefined ||
     filters.maxHeight !== undefined ||
     filters.ethnicity !== undefined ||
     filters.politics !== undefined ||
@@ -104,8 +110,12 @@ export const discoveryService = async (
     (filters.interests && filters.interests.length > 0) ||
     (filters.languages && filters.languages.length > 0);
 
-  if (hasPremiumFilters && !isPremium) {
-    throw new AppError(403, "Please upgrade to Mulli Plus or Mulli X to use these filters.");
+  if (hasTopTierFilters && !isAceOrEagle) {
+    throw new AppError(403, "Please upgrade to Ace or Eagle to use these advanced filters.");
+  }
+
+  if (hasBirdieFilters && !isPremium) {
+    throw new AppError(403, "Please upgrade to Birdie, Ace or Eagle to use these filters.");
   }
 
   if (isPremium) {
@@ -183,11 +193,25 @@ export const discoveryService = async (
         subscriptionRank: {
           $switch: {
             branches: [
-              { case: { $eq: ["$subscriptionPlan", Plan.MULLI_X] }, then: 5 },
-              { case: { $eq: ["$subscriptionPlan", Plan.MULLI_PLUS] }, then: 4 },
-              { case: { $eq: ["$subscriptionPlan", Plan.MULLI_ACE] }, then: 3 },
-              { case: { $eq: ["$subscriptionPlan", Plan.MULLI_BRIDIE] }, then: 2 },
-              { case: { $eq: ["$subscriptionPlan", Plan.MULLI_TRIAL] }, then: 1 }
+              { case: { $eq: ["$subscriptionPlan", Plan.ACE] }, then: 10 },
+              {
+                case: {
+                  $and: [
+                    { $eq: ["$subscriptionPlan", Plan.EAGLE] },
+                    { $gt: ["$boostedUntil", today] }
+                  ]
+                },
+                then: 9
+              },
+              {
+                case: {
+                  $and: [
+                    { $eq: ["$subscriptionPlan", Plan.BIRDIE] },
+                    { $gt: ["$boostedUntil", today] }
+                  ]
+                },
+                then: 8
+              }
             ],
             default: 0
           }
@@ -231,7 +255,7 @@ export const discoveryService = async (
     religion: u.religion,
     handicaprange: u.handicaprange, 
     tcp:"N/A",
-    hasMullix: u.subscriptionPlan === Plan.MULLI_X,
+    hasMullix: u.subscriptionPlan === Plan.ACE || u.subscriptionPlan === Plan.EAGLE,
     subscriptionType: u.subscriptionPlan || "NONE"
   }));
 

@@ -2,11 +2,10 @@ import { Schema, model } from "mongoose";
 import { Types } from "mongoose";
 
 export enum Plan {
-  MULLI_PLUS = "MULLI_PLUS",
-  MULLI_X = "MULLI_X",
-  MULLI_BRIDIE= "MULLI_BRIDIE",
-  MULLI_ACE = "MULLI_ACE",
-  MULLI_TRIAL="MULLI_TRIAL"
+  BIRDIE = "BIRDIE",
+  EAGLE = "EAGLE",
+  ACE = "ACE",
+  FREE = "FREE"
 }
 
 export enum SubscriptionStatus {

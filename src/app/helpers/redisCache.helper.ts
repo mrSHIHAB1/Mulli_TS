@@ -3,11 +3,8 @@ import { ISubscription } from "../modules/subscription/subscription.interface";
 
 const CACHE_TTL = 3600; // 1 hour
 
-// Use a blazing fast local memory cache to completely mask Redis latency
-const memoryCache = new Map<string, { value: any; expiresAt: number }>();
-
 /**
- * Cache user subscription plan
+ * Cache user subscription plan in Redis.
  */
 export const cacheUserSubscription = async (
   userId: string,
@@ -15,41 +12,24 @@ export const cacheUserSubscription = async (
 ): Promise<void> => {
   try {
     const key = `user:${userId}:subscription`;
-    
-    // 1. Instant local memory cache (0ms latency)
-    memoryCache.set(key, { value: subscription, expiresAt: Date.now() + (CACHE_TTL * 1000) });
-    
-    // 2. Fire and forget to Redis
-    redisClient.setex(key, CACHE_TTL, JSON.stringify(subscription)).catch(e => console.error("Redis set error", e));
+    await redisClient.setex(key, CACHE_TTL, JSON.stringify(subscription));
   } catch (error) {
     console.error("Error caching user subscription:", error);
   }
 };
 
 /**
- * Get cached user subscription
+ * Get cached user subscription from Redis.
+ * Returns undefined on cache miss, null when the user has no subscription.
  */
 export const getCachedUserSubscription = async (
   userId: string
 ): Promise<ISubscription | null | undefined> => {
   try {
     const key = `user:${userId}:subscription`;
-    
-    // 1. Check ultra-fast local memory cache first
-    const memCached = memoryCache.get(key);
-    if (memCached && Date.now() < memCached.expiresAt) {
-      return memCached.value;
-    }
-    
-    // 2. Fallback to Redis if missing in memory (happens on app restart)
     const cached = await redisClient.get(key);
-    if (cached === null) return undefined; // Cache miss
-    
-    const parsed = JSON.parse(cached);
-    // Sync to memory for next time
-    memoryCache.set(key, { value: parsed, expiresAt: Date.now() + (CACHE_TTL * 1000) });
-    
-    return parsed;
+    if (cached === null) return undefined; // cache miss
+    return JSON.parse(cached) as ISubscription | null;
   } catch (error) {
     console.error("Error retrieving cached subscription:", error);
     return undefined;
@@ -57,19 +37,14 @@ export const getCachedUserSubscription = async (
 };
 
 /**
- * Invalidate user subscription cache
+ * Invalidate user subscription cache in Redis.
  */
 export const invalidateUserSubscriptionCache = async (
   userId: string
 ): Promise<void> => {
   try {
     const key = `user:${userId}:subscription`;
-    
-    // Clear instantly from memory
-    memoryCache.delete(key);
-    
-    // Fire and forget invalidation from Redis
-    redisClient.del(key).catch(e => console.error("Redis del error", e));
+    await redisClient.del(key);
   } catch (error) {
     console.error("Error invalidating cache:", error);
   }

@@ -5,17 +5,39 @@ import {
 } from "app-store-server-api";
 import { Request } from "express";
 
-import { PRODUCT_PLAN_MAP, VALID_PRODUCT_IDS } from "../../config/iap.config";
+import {
+  PRODUCT_PLAN_MAP,
+  VALID_PRODUCT_IDS,
+} from "../../config/iap.config";
 import { SubscriptionStatus } from "../subscription/subscription.interface";
 import Subscription from "../subscription/subscription.model";
 import AppError from "../../errorHelpers/AppError";
 import { invalidateUserSubscriptionCache } from "../../helpers/redisCache.helper";
 
+// ✅ duration config (move to config file if you want cleaner structure)
+const PRODUCT_DURATION_MAP: Record<string, number> = {
+  mulli_plus_1m: 1,
+  mulli_plus_3month: 3,
+  mulli_plus_1y: 12,
+
+  mulli_x_1m: 1,
+  mulli_x_3m: 3,
+  mulli_x_1y: 12,
+
+  mulli_bridie_1m: 1,
+  mulli_bridie_3m: 3,
+  mulli_bridie_1y: 12,
+
+  mulli_ace_1m: 1,
+  mulli_ace_3m: 3,
+  mulli_ace_1y: 12,
+};
+
 // ── main service ─────────────────────────────────────────────────────────────
 
 const verifyPurchase = async (payload: {
   userId: string;
-  receiptData: string; // This is now a JWS (signed transaction) from StoreKit 2
+  receiptData: string;
   productId: string;
   source: "apple" | "google";
 }) => {
@@ -36,7 +58,7 @@ const verifyPurchase = async (payload: {
     );
   }
 
-  // --- 2. Decode & verify the JWS signed transaction ---
+  // --- 2. Decode transaction ---
   let transaction;
   try {
     transaction = await decodeTransaction(receiptData);
@@ -46,25 +68,73 @@ const verifyPurchase = async (payload: {
       `Failed to decode Apple transaction: ${err.message}`
     );
   }
-console.log("Decoded transaction:", transaction);
-  // --- 3. Validate the transaction matches the claimed productId ---
+
+  console.log("Decoded transaction:", transaction);
+
+  // --- 3. Validate product match ---
   if (transaction.productId !== productId) {
     throw new AppError(
       StatusCodes.BAD_REQUEST,
-      `Product ID mismatch: expected ${productId}, got ${transaction.productId}`
+      `Product mismatch: expected ${productId}, got ${transaction.productId}`
     );
   }
 
-  // --- 4. Check expiry ---
-  const expiryMs = transaction.expiresDate;
+  // 🚨 4. Prevent duplicate transaction abuse
+  const existingTransaction = await Subscription.findOne({
+    transactionId: transaction.transactionId,
+  });
+
+  if (existingTransaction) {
+    return existingTransaction;
+  }
+
+  // --- 5. Fetch existing active subscription (once) ---
+  const existingSub = await Subscription.findOne({
+    userId,
+    status: SubscriptionStatus.ACTIVE,
+  });
+
+  // --- 6. Handle expiry ---
+  let expiryMs = transaction.expiresDate;
 
   if (!expiryMs) {
-    throw new AppError(
-      StatusCodes.BAD_REQUEST,
-      "Transaction has no expiry date — not a subscription"
-    );
+    if (transaction.type === "Non-Renewing Subscription") {
+      const months = PRODUCT_DURATION_MAP[productId];
+
+      if (!months) {
+        throw new AppError(
+          StatusCodes.BAD_REQUEST,
+          `No duration mapping for productId: ${productId}`
+        );
+      }
+
+      if (!transaction.purchaseDate) {
+        throw new AppError(
+          StatusCodes.BAD_REQUEST,
+          "Missing purchaseDate"
+        );
+      }
+
+      let baseDate = new Date(transaction.purchaseDate);
+
+      // ✅ Extend if still active
+      if (existingSub && existingSub.end_date > new Date()) {
+        baseDate = existingSub.end_date;
+      }
+
+      const expiryDate = new Date(baseDate);
+      expiryDate.setMonth(expiryDate.getMonth() + months);
+
+      expiryMs = expiryDate.getTime();
+    } else {
+      throw new AppError(
+        StatusCodes.BAD_REQUEST,
+        "Transaction missing expiry date"
+      );
+    }
   }
 
+  // --- 7. Expiry validation ---
   if (expiryMs < Date.now()) {
     throw new AppError(
       StatusCodes.BAD_REQUEST,
@@ -72,28 +142,25 @@ console.log("Decoded transaction:", transaction);
     );
   }
 
-  // --- 5. Resolve internal plan from productId ---
+  // --- 8. Resolve plan ---
   const resolvedPlan = PRODUCT_PLAN_MAP[productId];
 
   if (!resolvedPlan) {
     throw new AppError(
       StatusCodes.BAD_REQUEST,
-      `No plan mapping found for productId: ${productId}`
+      `No plan mapping for productId: ${productId}`
     );
   }
 
   const transactionId = transaction.transactionId;
   const originalTransactionId =
     transaction.originalTransactionId || transactionId;
+
   const purchaseDate = transaction.purchaseDate
     ? new Date(transaction.purchaseDate)
     : new Date();
 
-  // --- 6. Check for existing active subscription ---
-  const existingSub = await Subscription.findOne({
-    userId,
-    status: SubscriptionStatus.ACTIVE,
-  });
+  // --- 9. Update or create subscription ---
 
   if (existingSub) {
     const updated = await Subscription.findByIdAndUpdate(
@@ -112,7 +179,6 @@ console.log("Decoded transaction:", transaction);
     return updated;
   }
 
-  // --- 7. Create new subscription ---
   const newSub = await Subscription.create({
     userId,
     plan_type: resolvedPlan,
@@ -123,14 +189,14 @@ console.log("Decoded transaction:", transaction);
     platform: "ios",
     start_date: purchaseDate,
     end_date: new Date(expiryMs),
-    auto_renew: true,
+    auto_renew: false, // ✅ important
   });
 
   await invalidateUserSubscriptionCache(userId);
   return newSub;
 };
 
-// ── webhook handler (unchanged) ──────────────────────────────────────────────
+// ── webhook handler ──────────────────────────────────────────────────────────
 
 const handleAppleWebhook = async (req: Request) => {
   const signedPayload = req.body.signedPayload;
@@ -140,6 +206,7 @@ const handleAppleWebhook = async (req: Request) => {
   }
 
   const payload = await decodeNotificationPayload(signedPayload);
+  console.log("Decoded Apple webhook payload:", payload);
 
   if (!payload.data?.signedTransactionInfo) {
     throw new Error("No signedTransactionInfo in payload");
@@ -162,18 +229,13 @@ const handleAppleWebhook = async (req: Request) => {
     }
   }
 
-  if (eventType === "DID_CHANGE_RENEWAL_STATUS") {
-    if (transaction.expiresDate) {
-      updateData.end_date = new Date(transaction.expiresDate);
-    }
-  }
-
   if (eventType === "DID_RENEW") {
     updateData.status = SubscriptionStatus.ACTIVE;
+    updateData.transactionId = transactionId;
+
     if (transaction.expiresDate) {
       updateData.end_date = new Date(transaction.expiresDate);
     }
-    updateData.transactionId = transactionId;
   }
 
   if (eventType === "REFUND") {
@@ -181,7 +243,7 @@ const handleAppleWebhook = async (req: Request) => {
   }
 
   if (Object.keys(updateData).length === 0) {
-    return { message: "No action needed for this event type", eventType };
+    return { message: "No action needed", eventType };
   }
 
   const updated = await Subscription.findOneAndUpdate(
@@ -196,14 +258,7 @@ const handleAppleWebhook = async (req: Request) => {
   );
 
   if (updated) {
-    console.log(
-      `Webhook updated subscription ${updated._id} for user ${updated.userId}`
-    );
     await invalidateUserSubscriptionCache(updated.userId.toString());
-  } else {
-    console.warn(
-      `Webhook received for unknown subscription. transactionId: ${transactionId}, originalTransactionId: ${originalTransactionId}`
-    );
   }
 
   return updated;

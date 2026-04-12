@@ -15,6 +15,10 @@ export const bullmqRedis = new IORedis({
   enableReadyCheck: false,    // required by BullMQ
 });
 
+bullmqRedis.on("error", (err) => {
+  console.error("[BullMQ Redis] Connection error:", err.message);
+});
+
 /**
  * Call this once at server startup to enforce noeviction policy.
  * BullMQ will log warnings if the policy is volatile-lru or any other eviction mode.

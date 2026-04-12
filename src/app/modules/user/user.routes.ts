@@ -26,6 +26,7 @@ router.post("/block",checkAuth(...Object.values(Role)) ,blockUser);      // Bloc
 router.post("/unblock",checkAuth(...Object.values(Role)), unblockUser);  // Unblock a user
 router.get("/blocked",checkAuth(...Object.values(Role)), getBlockedUsers); // List blocked users
 router.patch("/profile",checkAuth(...Object.values(Role)), userControllers.updateUserProfile);
+router.post("/profile/boost", checkAuth(...Object.values(Role)), userControllers.activateBoost);
 router.delete("/delete-account",checkAuth(...Object.values(Role)), userControllers.deleteAccount);
 
 export const userRoutes = router;

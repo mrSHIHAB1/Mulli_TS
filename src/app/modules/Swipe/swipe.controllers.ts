@@ -128,11 +128,11 @@ export const likeUser = catchAsync(
       }
 
       // -------------------------------------------------------------
-      // Subscription Check: Unlimited likes for MULLI_X only
+      // Subscription Check: Unlimited likes for ACE or EAGLE
       // -------------------------------------------------------------
       const mySubscription = await SubscriptionService.getMySubscription(fromUser);
       
-      if (!mySubscription || mySubscription.plan_type !== Plan.MULLI_X) {
+      if (!mySubscription || ![Plan.ACE, Plan.EAGLE].includes(mySubscription.plan_type as Plan)) {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
@@ -147,7 +147,7 @@ export const likeUser = catchAsync(
           return sendResponse(res, {
             statusCode: 403, // Or 402 Payment Required
             success: false,
-            message: "Daily like limit reached. Upgrade to Mulli X for unlimited likes!",
+            message: "Daily like limit reached. Upgrade to Ace or Eagle for unlimited likes!",
             data: null,
           });
         }
@@ -307,12 +307,12 @@ export const getUsersWhoLikedMe = catchAsync(
     console.log("My Subscription:", mySubscription);
     if (
       !mySubscription || 
-      ![Plan.MULLI_PLUS, Plan.MULLI_X].includes(mySubscription.plan_type as Plan)
+      ![Plan.ACE, Plan.EAGLE].includes(mySubscription.plan_type as Plan)
     ) {
       return sendResponse(res, {
         statusCode: 403,
         success: false,
-        message: "Upgrade to Mulli Plus or Mulli X to see who liked you!",
+        message: "Upgrade to Ace or Eagle to see who liked you!",
         data: null,
       });
     }
@@ -339,7 +339,7 @@ export const getUsersWhoLikedMe = catchAsync(
     const activeSubs = await Subscription.find({
       userId: { $in: userIds },
       status: "ACTIVE",
-      plan_type: Plan.MULLI_X
+      plan_type: { $in: [Plan.ACE, Plan.EAGLE] }
     }).select("userId");
 
     const privilegedUserIds = new Set(activeSubs.map(s => s.userId.toString()));
@@ -390,7 +390,7 @@ export const getUsersILiked = catchAsync(
     const activeSubs = await Subscription.find({
       userId: { $in: userIds },
       status: "ACTIVE",
-      plan_type: Plan.MULLI_X
+      plan_type: { $in: [Plan.ACE, Plan.EAGLE] }
     }).select("userId");
 
     const privilegedUserIds = new Set(activeSubs.map(s => s.userId.toString()));

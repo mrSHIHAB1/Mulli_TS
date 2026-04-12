@@ -2,32 +2,28 @@ import { Plan } from "../modules/subscription/subscription.interface";
 import { PRODUCT_DURATION_MAP } from "./subscriptionPlans";
 
 export const PRODUCT_PLAN_MAP: Record<string, Plan> = {
-  // MULLI PLUS
-  "mulli_plus_1m": Plan.MULLI_PLUS,
-  "mulli_plus_3m": Plan.MULLI_PLUS,
-  "mulli_plus_1y": Plan.MULLI_PLUS,
+  // BIRDIE
+  "mulli_birdie_1m": Plan.BIRDIE,
+  "mulli_birdie_3m": Plan.BIRDIE,
 
-  // MULLI X
-  "mulli_x_1m": Plan.MULLI_X,
-  "mulli_x_3m": Plan.MULLI_X,
-  "mulli_x_1y": Plan.MULLI_X,
 
-  // MULLI BRIDIE
-  "mulli_bridie_1m": Plan.MULLI_BRIDIE,
-  "mulli_bridie_3m": Plan.MULLI_BRIDIE,
-  "mulli_bridie_1y": Plan.MULLI_BRIDIE,
+  // EAGLE
+  "mulli_eagle_1m": Plan.EAGLE,
+  "mulli_eagle_3m": Plan.EAGLE,
+
+
 
   // MULLI ACE
-  "mulli_ace_1m": Plan.MULLI_ACE,
-  "mulli_ace_3m": Plan.MULLI_ACE,
-  "mulli_ace_1y": Plan.MULLI_ACE,
+  "mulli_ace_1m": Plan.ACE,
+  "mulli_ace_3m": Plan.ACE,
+  
 };
 
 export const VALID_PRODUCT_IDS = Object.keys(PRODUCT_PLAN_MAP);
 
 /**
  * Extract plan from product ID
- * @example "mulli_plus_1m" -> Plan.MULLI_PLUS
+ * @example "mulli_birdie_1m" -> Plan.BIRDIE
  */
 export const extractPlanFromProductId = (productId: string): Plan | null => {
   return PRODUCT_PLAN_MAP[productId] || null;
@@ -35,10 +31,11 @@ export const extractPlanFromProductId = (productId: string): Plan | null => {
 
 /**
  * Get product IDs for a specific plan
- * @example Plan.MULLI_PLUS -> ["mulli_plus_1m", "mulli_plus_3m", "mulli_plus_1y"]
+ * @example Plan.BIRDIE -> ["mulli_birdie_1m", "mulli_birdie_3m", "mulli_birdie_1y"]
  */
 export const getProductIdsForPlan = (plan: Plan): string[] => {
   return Object.entries(PRODUCT_PLAN_MAP)
     .filter(([_, planValue]) => planValue === plan)
     .map(([productId]) => productId);
 };
+

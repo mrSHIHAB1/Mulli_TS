@@ -40,10 +40,9 @@ const getMySubscription = async (userId: string) => {
       const actualSub = await Subscription.findOne({ _id: (cachedSubscription as any)._id || (cachedSubscription as any).id });
       if (actualSub) {
         actualSub.status = SubscriptionStatus.EXPIRED;
-        
         await actualSub.save();
       }
-      await invalidateUserSubscriptionCache(userId);
+      await cacheUserSubscription(userId, null); // cache null so next request doesn't hit DB again
       return null;
     }
 

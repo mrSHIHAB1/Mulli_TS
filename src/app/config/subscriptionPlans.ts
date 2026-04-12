@@ -4,10 +4,10 @@
  */
 
 export enum Plan {
-  MULLI_PLUS = "MULLI_PLUS",
-  MULLI_X = "MULLI_X",
-  MULLI_BRIDIE = "MULLI_BRIDIE",
-  MULLI_ACE = "MULLI_ACE",
+  BIRDIE = "BIRDIE",
+  EAGLE = "EAGLE",
+  ACE = "ACE",
+  FREE = "FREE",
 }
 
 export interface PlanFeatures {
@@ -22,8 +22,8 @@ export interface PlanFeatures {
 }
 
 export const SUBSCRIPTION_PLANS: Record<Plan, PlanFeatures> = {
-  [Plan.MULLI_PLUS]: {
-    name: "Mulli Plus",
+  [Plan.BIRDIE]: {
+    name: "BIRDIE",
     description: "Good for casual dating",
     monthlyPrice: 9.99,
     yearlyPrice: 89.99,
@@ -36,8 +36,8 @@ export const SUBSCRIPTION_PLANS: Record<Plan, PlanFeatures> = {
     maxMessages: -1,
     premiumFeatures: ["See likes"],
   },
-  [Plan.MULLI_X]: {
-    name: "Mulli X",
+  [Plan.EAGLE]: {
+    name: "EAGLE",
     description: "For serious connections",
     monthlyPrice: 19.99,
     yearlyPrice: 179.99,
@@ -51,8 +51,8 @@ export const SUBSCRIPTION_PLANS: Record<Plan, PlanFeatures> = {
     maxMessages: -1,
     premiumFeatures: ["Priority messaging", "Mutual interests", "Profile boost"],
   },
-  [Plan.MULLI_BRIDIE]: {
-    name: "Mulli Bridie",
+  [Plan.ACE]: {
+    name: "ACE",
     description: "For women seeking premium experience",
     monthlyPrice: 14.99,
     yearlyPrice: 129.99,
@@ -66,11 +66,11 @@ export const SUBSCRIPTION_PLANS: Record<Plan, PlanFeatures> = {
     maxMessages: -1,
     premiumFeatures: ["Women networking", "Event access", "Verification badge"],
   },
-  [Plan.MULLI_ACE]: {
-    name: "Mulli Ace",
-    description: "The complete premium experience",
-    monthlyPrice: 29.99,
-    yearlyPrice: 259.99,
+  [Plan.FREE]: {
+    name: "FREE",
+    description: "Limited features for basic users",
+    monthlyPrice: 0,
+    yearlyPrice: 0  ,
     features: [
       "Everything in X & Bridie",
       "Concierge support",

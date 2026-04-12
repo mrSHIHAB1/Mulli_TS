@@ -307,6 +307,18 @@ export const deleteAccount = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const activateBoost = catchAsync(async (req: Request, res: Response) => {
+  const userId = (req as any).user?.id || (req as any).user?._id;
+  const user = await userService.activateBoost(userId);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Profile boosted for 30 minutes!",
+    data: user,
+  });
+});
+
 export const userControllers = {
   createUser,
   sendEmailOtp,
@@ -316,5 +328,6 @@ export const userControllers = {
   updateFcmToken,
   updateUserProfile,
   deleteAccount,
+  activateBoost,
 };
 
