@@ -117,7 +117,9 @@ const clubhouseSchema = new Schema<IClubhouseDocument>(
   }
 ],
   milestoneAwarded: { type: Boolean, default: false },
+  boostedAt: { type: Date, default: null },
   },
+
   {
     timestamps: true,
     toJSON: { virtuals: true },

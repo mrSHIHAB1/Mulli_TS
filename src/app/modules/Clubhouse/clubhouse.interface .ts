@@ -148,7 +148,9 @@ export interface IClubhouse {
   backgroundColor?: string;
   reports: IReport[];
   milestoneAwarded?: boolean;
+  boostedAt?: Date;
 }
+
 
 export interface IClubhouseDocument extends IClubhouse, Document {
   createdAt: Date;

@@ -41,4 +41,3 @@ export interface ISubscription {
   createdAt?: Date;
   updatedAt?: Date;
 }
-  

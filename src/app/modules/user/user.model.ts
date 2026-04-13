@@ -133,10 +133,14 @@ const UserSchema: Schema<IUser> = new Schema(
     boostsUsedThisMonth: { type: Number, default: 0 },
     lastBoostResetDate: { type: Date, default: null },
 
-    // Location change fields
     locationChangesUsedThisMonth: { type: Number, default: 0 },
     lastLocationChangeResetDate: { type: Date, default: null },
+
+    // Clubhouse Post Boost fields
+    clubhouseBoostsUsedThisMonth: { type: Number, default: 0 },
+    lastClubhouseBoostResetDate: { type: Date, default: null },
   },
+
   { timestamps: true }
 );
 

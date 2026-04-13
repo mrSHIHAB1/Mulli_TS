@@ -16,9 +16,11 @@ export interface PlanFeatures {
   monthlyPrice: number;
   yearlyPrice: number;
   features: string[];
-  maxMatches?: number;
   maxMessages?: number;
+  maxMatches?: number;
+  clubhouseBoosts: number;
   premiumFeatures: string[];
+
 }
 
 export const SUBSCRIPTION_PLANS: Record<Plan, PlanFeatures> = {
@@ -34,7 +36,9 @@ export const SUBSCRIPTION_PLANS: Record<Plan, PlanFeatures> = {
     ],
     maxMatches: -1, // unlimited
     maxMessages: -1,
+    clubhouseBoosts: 2,
     premiumFeatures: ["See likes"],
+
   },
   [Plan.EAGLE]: {
     name: "EAGLE",
@@ -49,7 +53,9 @@ export const SUBSCRIPTION_PLANS: Record<Plan, PlanFeatures> = {
     ],
     maxMatches: -1,
     maxMessages: -1,
+    clubhouseBoosts: 4,
     premiumFeatures: ["Priority messaging", "Mutual interests", "Profile boost"],
+
   },
   [Plan.ACE]: {
     name: "ACE",
@@ -64,13 +70,15 @@ export const SUBSCRIPTION_PLANS: Record<Plan, PlanFeatures> = {
     ],
     maxMatches: -1,
     maxMessages: -1,
+    clubhouseBoosts: -1, // Unlimited
     premiumFeatures: ["Women networking", "Event access", "Verification badge"],
+
   },
   [Plan.FREE]: {
     name: "FREE",
     description: "Limited features for basic users",
     monthlyPrice: 0,
-    yearlyPrice: 0  ,
+    yearlyPrice: 0,
     features: [
       "Everything in X & Bridie",
       "Concierge support",
@@ -81,7 +89,9 @@ export const SUBSCRIPTION_PLANS: Record<Plan, PlanFeatures> = {
     ],
     maxMatches: -1,
     maxMessages: -1,
+    clubhouseBoosts: 0,
     premiumFeatures: [
+
       "Concierge support",
       "Advanced filters",
       "Super likes",

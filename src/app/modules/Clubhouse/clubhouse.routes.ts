@@ -16,7 +16,9 @@ router.get("/posts/:id", postController.getPostById);
 
 // Interactions require auth
 router.post("/like/:id", checkAuth(...Object.values(Role)), postController.likePost);
+router.post("/boost/:id", checkAuth(...Object.values(Role)), postController.boostPost);
 router.post("/:id/gift", checkAuth(...Object.values(Role)), postController.sendGift);
+
 
 // New Comment Routes
 router.post("/comment/:postId", checkAuth(...Object.values(Role)), postController.createComment);

@@ -2,6 +2,11 @@
 import mongoose from "mongoose";
 import { Post, Comment, CategorySetting, ClubhouseFollow } from "./clubhouse.model";
 import { ReportType, PostCategory, ReactionType } from "./clubhouse.interface ";
+import Subscription from "../subscription/subscription.model";
+import User from "../user/user.model";
+import { Plan, SUBSCRIPTION_PLANS } from "../../config/subscriptionPlans";
+import { SubscriptionStatus } from "../subscription/subscription.interface";
+
 import { NotificationService } from "../notification/notification.service";
 import {
   onPostCreated,
@@ -57,10 +62,11 @@ export const getHomeFeedService = async (): Promise<any[]> => {
   const posts = await Post.find()
     .select("-reports")
     .populate("author", "firstName lastName profileImage skillLevel")
-    .sort({ createdAt: -1 });
+    .sort({ boostedAt: -1, createdAt: -1 });
 
   return posts;
 };
+
 
 export const reactPostService = async (
   user: any,
@@ -538,7 +544,65 @@ export const getClubhouseProfileService = async (userId: string): Promise<any> =
 
 
 
+export const boostPostService = async (
+  userId: string,
+  postId: string
+): Promise<any> => {
+  const user = await User.findById(userId);
+  if (!user) throw new Error("User not found");
+
+  const post = await Post.findById(postId);
+  if (!post) throw new Error("Post not found");
+
+  if (post.author.toString() !== userId) {
+    throw new Error("You can only boost your own posts");
+  }
+
+  // 1. Determine User's Plan
+  const activeSub = await Subscription.findOne({
+    userId,
+    status: SubscriptionStatus.ACTIVE,
+  });
+
+  const plan = (activeSub?.plan_type as Plan) || Plan.FREE;
+  const planConfig = SUBSCRIPTION_PLANS[plan];
+  const boostLimit = planConfig.clubhouseBoosts;
+
+  if (boostLimit === 0) {
+    throw new Error("Your current plan does not include post boosts");
+  }
+
+  // 2. Handle Monthly Reset
+  const now = new Date();
+  const lastReset = user.lastClubhouseBoostResetDate || user.createdAt || now;
+  const isNewMonth = 
+    now.getMonth() !== lastReset.getMonth() || 
+    now.getFullYear() !== lastReset.getFullYear();
+
+  if (isNewMonth) {
+    user.clubhouseBoostsUsedThisMonth = 0;
+    user.lastClubhouseBoostResetDate = now;
+  }
+
+  // 3. Check Limit (if not unlimited)
+  if (boostLimit !== -1) {
+    if ((user.clubhouseBoostsUsedThisMonth || 0) >= boostLimit) {
+      throw new Error(`You have reached your limit of ${boostLimit} boosts for this month`);
+    }
+  }
+
+  // 4. Apply Boost
+  post.boostedAt = now;
+  await post.save();
+
+  user.clubhouseBoostsUsedThisMonth = (user.clubhouseBoostsUsedThisMonth || 0) + 1;
+  await user.save();
+
+  return post;
+};
+
 export const postServices = {
+
   createPostService,
   getHomeFeedService,
   getPostByIdService,
@@ -557,5 +621,7 @@ export const postServices = {
   followPostTypeService,
   unfollowPostTypeService,
   getClubhouseProfileService,
+  boostPostService,
 };
+
 

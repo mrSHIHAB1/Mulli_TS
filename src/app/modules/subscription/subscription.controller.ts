@@ -11,11 +11,10 @@ import mongoose from "mongoose";
 
 const createSubscription = catchAsync(async (req: Request, res: Response) => {
 
-    // const { userId } = req.user as JwtPayload;
-    const userId = "69a65518b1884ecd3f638ce3"; // test ObjectId
+    const { id } = req.user as JwtPayload;
     const result = await SubscriptionService.createSubscription({
         ...req.body,
-        userId,
+        userId:id,
     });
 
     sendResponse(res, {

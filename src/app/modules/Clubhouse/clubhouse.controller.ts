@@ -331,7 +331,6 @@ const superlikePost = catchAsync(async (req: Request, res: Response) => {
 const getClubhouseProfile = catchAsync(async (req: Request, res: Response) => {
   const userId = req.params.userId as string;
   const result = await postServices.getClubhouseProfileService(userId);
-
   sendResponse(res, {
     success: true,
     statusCode: 200,
@@ -340,7 +339,22 @@ const getClubhouseProfile = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const boostPost = catchAsync(async (req: Request, res: Response) => {
+  const currentUser: any = (req as any).user;
+  const { id } = req.params;
+
+  const result = await postServices.boostPostService(currentUser.id, id);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "Post boosted successfully!",
+    data: result,
+  });
+});
+
 export const postController = {
+
   createPost,
   getHomeFeed,
   getPostById,
@@ -359,5 +373,5 @@ export const postController = {
   followPostType,
   unfollowPostType,
   getClubhouseProfile,
+  boostPost,
 };
-

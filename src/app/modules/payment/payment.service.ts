@@ -1,8 +1,10 @@
 import { StatusCodes } from "http-status-codes";
 import {
   decodeNotificationPayload,
+  decodeRenewalInfo,
   decodeTransaction,
 } from "app-store-server-api";
+
 import { Request } from "express";
 
 import {
@@ -13,25 +15,28 @@ import { SubscriptionStatus } from "../subscription/subscription.interface";
 import Subscription from "../subscription/subscription.model";
 import AppError from "../../errorHelpers/AppError";
 import { invalidateUserSubscriptionCache } from "../../helpers/redisCache.helper";
+import PaymentTransaction from "./payment.model";
+import {
+  PaymentPlatform,
+  PaymentTransactionStatus,
+  PaymentTransactionType,
+} from "./payment.interface";
+import { SUBSCRIPTION_PLANS } from "../../config/subscriptionPlans";
+
 
 // ✅ duration config (move to config file if you want cleaner structure)
-const PRODUCT_DURATION_MAP: Record<string, number> = {
-  mulli_plus_1m: 1,
-  mulli_plus_3month: 3,
-  mulli_plus_1y: 12,
+const PRODUCT_MONTHS_MAP: Record<string, number> = {
+  mulli_eagle_1m: 1,
+  mulli_eagle_3m: 3,
 
-  mulli_x_1m: 1,
-  mulli_x_3m: 3,
-  mulli_x_1y: 12,
-
-  mulli_bridie_1m: 1,
-  mulli_bridie_3m: 3,
-  mulli_bridie_1y: 12,
+  mulli_birdie_1m: 1,
+  mulli_birdie_3m: 3,
 
   mulli_ace_1m: 1,
   mulli_ace_3m: 3,
-  mulli_ace_1y: 12,
+
 };
+
 
 // ── main service ─────────────────────────────────────────────────────────────
 
@@ -88,18 +93,28 @@ const verifyPurchase = async (payload: {
     return existingTransaction;
   }
 
-  // --- 5. Fetch existing active subscription (once) ---
+  const transactionId = transaction.transactionId;
+  const originalTransactionId =
+    transaction.originalTransactionId || transactionId;
+
+  const purchaseDate = transaction.purchaseDate
+    ? new Date(transaction.purchaseDate)
+    : new Date();
+
+  // --- 5. Resolve existing subscription by originalTransactionId ---
   const existingSub = await Subscription.findOne({
     userId,
-    status: SubscriptionStatus.ACTIVE,
+    originalTransactionId,
   });
+
 
   // --- 6. Handle expiry ---
   let expiryMs = transaction.expiresDate;
 
   if (!expiryMs) {
     if (transaction.type === "Non-Renewing Subscription") {
-      const months = PRODUCT_DURATION_MAP[productId];
+      const months = PRODUCT_MONTHS_MAP[productId];
+
 
       if (!months) {
         throw new AppError(
@@ -117,10 +132,17 @@ const verifyPurchase = async (payload: {
 
       let baseDate = new Date(transaction.purchaseDate);
 
-      // ✅ Extend if still active
-      if (existingSub && existingSub.end_date > new Date()) {
-        baseDate = existingSub.end_date;
+      // ✅ Extend if still active (matching this specific product)
+      const existingActive = await Subscription.findOne({
+        userId,
+        productId: transaction.productId,
+        status: SubscriptionStatus.ACTIVE,
+      });
+
+      if (existingActive && existingActive.end_date > new Date()) {
+        baseDate = existingActive.end_date;
       }
+
 
       const expiryDate = new Date(baseDate);
       expiryDate.setMonth(expiryDate.getMonth() + months);
@@ -152,13 +174,7 @@ const verifyPurchase = async (payload: {
     );
   }
 
-  const transactionId = transaction.transactionId;
-  const originalTransactionId =
-    transaction.originalTransactionId || transactionId;
 
-  const purchaseDate = transaction.purchaseDate
-    ? new Date(transaction.purchaseDate)
-    : new Date();
 
   // --- 9. Update or create subscription ---
 
@@ -167,11 +183,15 @@ const verifyPurchase = async (payload: {
       existingSub._id,
       {
         plan_type: resolvedPlan,
+        productId: transaction.productId,
         transactionId,
         originalTransactionId,
         end_date: new Date(expiryMs),
         status: SubscriptionStatus.ACTIVE,
+        metadata: transaction,
       },
+
+
       { returnDocument: "after" }
     );
 
@@ -185,16 +205,61 @@ const verifyPurchase = async (payload: {
     status: SubscriptionStatus.ACTIVE,
     transactionId,
     originalTransactionId,
-    productId,
+    productId: transaction.productId,
     platform: "ios",
     start_date: purchaseDate,
     end_date: new Date(expiryMs),
-    auto_renew: false, // ✅ important
+    auto_renew: transaction.type === "Auto-Renewable Subscription",
+ 
   });
 
+
   await invalidateUserSubscriptionCache(userId);
-  return newSub;
+
+  // ── 10. Log Transaction History ───────────────────────────────────────────
+  try {
+    const planConfig = SUBSCRIPTION_PLANS[resolvedPlan];
+
+    // Determine billing cycle string
+    let billingCycle: "1m" | "3m" | "1y" = "1m";
+    const months = PRODUCT_MONTHS_MAP[productId];
+    if (months === 3) billingCycle = "3m";
+    else if (months === 12) billingCycle = "1y";
+
+    // Calculate amount based on billing cycle (simple heuristic)
+    let amount = planConfig?.monthlyPrice || 0;
+    if (billingCycle === "3m") amount = (planConfig?.monthlyPrice || 0) * 3;
+    if (billingCycle === "1y") amount = planConfig?.yearlyPrice || 0;
+
+
+    await PaymentTransaction.create({
+      userId,
+      subscriptionId: existingSub ? existingSub._id : newSub?._id,
+      transactionId,
+      originalTransactionId,
+      transactionType: PaymentTransactionType.PURCHASE,
+      status: PaymentTransactionStatus.COMPLETED,
+      platform: PaymentPlatform.APPLE_IAP,
+      productId:transaction.productId,
+      amount: Math.round(amount * 100), // Convert to cents
+      currency: transaction.currency ,
+      planType: resolvedPlan,
+      billingCycle,
+      purchaseDate,
+      expiryDate: new Date(expiryMs),
+      metadata: {
+        rawTransaction: transaction,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to log payment transaction:", error);
+    // We don't throw here to avoid failing the purchase verification 
+    // if only the history logging fails
+  }
+
+  return existingSub || newSub;
 };
+
 
 // ── webhook handler ──────────────────────────────────────────────────────────
 
@@ -217,12 +282,28 @@ const handleAppleWebhook = async (req: Request) => {
   );
 
   const transactionId = transaction.transactionId;
-  const originalTransactionId = transaction.originalTransactionId;
+  const originalTransactionId = transaction.originalTransactionId || transactionId;
   const eventType = payload.notificationType;
 
-  let updateData: any = {};
+  // Extract auto-renew status from renewal info if present
+  let autoRenew = false;
+  if (payload.data?.signedRenewalInfo) {
+    try {
+      const renewalInfo = await decodeRenewalInfo(payload.data.signedRenewalInfo);
+      autoRenew = renewalInfo.autoRenewStatus === 1;
+    } catch (e) {
+      console.error("Failed to decode Apple renewal info:", e);
+    }
+  }
+
+  let updateData: any = {
+    auto_renew: autoRenew,
+    metadata: transaction,
+  };
+
 
   if (eventType === "EXPIRED") {
+
     updateData.status = SubscriptionStatus.EXPIRED;
     if (transaction.expiresDate) {
       updateData.end_date = new Date(transaction.expiresDate);
@@ -232,11 +313,20 @@ const handleAppleWebhook = async (req: Request) => {
   if (eventType === "DID_RENEW") {
     updateData.status = SubscriptionStatus.ACTIVE;
     updateData.transactionId = transactionId;
+    updateData.productId = transaction.productId;
+    
+    // Resolve and update plan type in case of plan change
+    const resolvedPlan = PRODUCT_PLAN_MAP[transaction.productId];
+    if (resolvedPlan) {
+      updateData.plan_type = resolvedPlan;
+    }
+
 
     if (transaction.expiresDate) {
       updateData.end_date = new Date(transaction.expiresDate);
     }
   }
+
 
   if (eventType === "REFUND") {
     updateData.status = SubscriptionStatus.CANCELLED;
@@ -257,12 +347,60 @@ const handleAppleWebhook = async (req: Request) => {
     { returnDocument: "after" }
   );
 
+  // Update latest transaction info in subscription metadata
+  if (updated) {
+    await Subscription.findByIdAndUpdate(updated._id, { metadata: transaction });
+  }
+
+
   if (updated) {
     await invalidateUserSubscriptionCache(updated.userId.toString());
+
+    // ── Log Transaction History for Webhook Event ────────────────────────────
+    try {
+      let transactionType = PaymentTransactionType.RENEWAL;
+      let status = PaymentTransactionStatus.COMPLETED;
+
+      if (eventType === "EXPIRED") {
+        transactionType = PaymentTransactionType.CANCELLATION;
+        status = PaymentTransactionStatus.CANCELLED;
+      } else if (eventType === "REFUND") {
+        transactionType = PaymentTransactionType.REFUND;
+        status = PaymentTransactionStatus.REFUNDED;
+      }
+
+      await PaymentTransaction.create({
+        userId: updated.userId,
+        subscriptionId: updated._id,
+        transactionId,
+        originalTransactionId,
+        transactionType,
+        status,
+        platform: PaymentPlatform.APPLE_IAP,
+        productId: transaction.productId,
+        amount: 0, // Webhook might not have amount, or use 0 for status changes
+        currency: "USD",
+        purchaseDate: transaction.purchaseDate
+          ? new Date(transaction.purchaseDate)
+          : new Date(),
+        expiryDate: transaction.expiresDate
+          ? new Date(transaction.expiresDate)
+          : undefined,
+        webhookEventType: eventType,
+        webhookPayload: payload,
+        metadata: {
+          rawTransaction: transaction,
+        },
+      });
+
+    } catch (error) {
+      console.error("Failed to log webhook transaction history:", error);
+    }
   }
 
   return updated;
 };
+
 
 export const PaymentService = {
   verifyPurchase,

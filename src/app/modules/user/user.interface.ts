@@ -57,7 +57,7 @@ export interface IBadgeProximityNotified {
 }
 
 export interface IUser {
-    _id?: Types.ObjectId;
+  _id?: Types.ObjectId;
   email?: string;
   phone?: string;
   password?: string;
@@ -79,7 +79,7 @@ export interface IUser {
   name?: string;
   firstName?: string;
   lastName?: string;
-    fcmTokens?: string[] ,
+  fcmTokens?: string[],
   // Misc fields used by the new dating/golf profile
   birthdate?: Date;
   trackactivity?: "Once" | "While_Using" | "No";
@@ -90,11 +90,11 @@ export interface IUser {
   country?: string;
   religion?: string;
   skillLevel?:
-    | "Beginner"
-    | "Novice"
-    | "Intermediate"
-    | "Advanced"
-    | "Expert";
+  | "Beginner"
+  | "Novice"
+  | "Intermediate"
+  | "Advanced"
+  | "Expert";
   handicaprange?: {
     minRange?: number;
     maxRange?: number;
@@ -136,8 +136,12 @@ export interface IUser {
   boostsUsedThisMonth?: number;
   lastBoostResetDate?: Date | null;
 
-  // Location change fields
   locationChangesUsedThisMonth?: number;
   lastLocationChangeResetDate?: Date | null;
+
+  // Clubhouse Boost fields
+  clubhouseBoostsUsedThisMonth?: number;
+  lastClubhouseBoostResetDate?: Date | null;
 }
+
 

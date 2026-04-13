@@ -13,4 +13,18 @@ router.post(
 
 router.post("/apple-webhook", PaymentController.appleWebhook);
 
+// 📜 Get transaction history for user
+router.get(
+  "/transaction-history",
+  checkAuth(...Object.values(Role)),
+  PaymentController.getTransactionHistory
+);
+
+// 📊 Get payment summary for user
+router.get(
+  "/payment-summary",
+  checkAuth(...Object.values(Role)),
+  PaymentController.getPaymentSummary
+);
+
 export const PaymentRoutes = router;

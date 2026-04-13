@@ -307,6 +307,29 @@ export const deleteAccount = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const updateProfileImages = catchAsync(async (req: Request, res: Response) => {
+  const userId = (req as any).user?.id || (req as any).user?._id;
+  const file = req.file as Express.Multer.File | undefined;
+
+  if (!file) {
+    return sendResponse(res, {
+      statusCode: 400,
+      success: false,
+      message: "Image file is required",
+      data: null,
+    });
+  }
+
+  const updated = await userService.updateProfileImagesService(userId, file);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Profile image updated successfully",
+    data: updated,
+  });
+});
+
 const activateBoost = catchAsync(async (req: Request, res: Response) => {
   const userId = (req as any).user?.id || (req as any).user?._id;
   const user = await userService.activateBoost(userId);
@@ -324,9 +347,10 @@ export const userControllers = {
   sendEmailOtp,
   verifyEmailOtp,
   sendPhoneOtp,
-  verifyPhoneOtp,  
+  verifyPhoneOtp,
   updateFcmToken,
   updateUserProfile,
+  updateProfileImages,
   deleteAccount,
   activateBoost,
 };

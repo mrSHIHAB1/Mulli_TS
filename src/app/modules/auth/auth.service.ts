@@ -7,6 +7,8 @@ import { verifyToken } from "../../utils/jwt";
 import { envVars } from "../../config/env";
 import User from "../user/user.model";
 import { userService } from "../user/user.service";
+import Subscription from "../subscription/subscription.model";
+import { SubscriptionStatus } from "../subscription/subscription.interface";
 
 interface ServiceResult<T = any> {
   success: boolean;
@@ -152,9 +154,38 @@ const getMe = async (authUser: any): Promise<any> => {
     throw new Error("User not found");
   }
 
+  // Fetch active subscription
+  let subscription = null;
+  try {
+    const activeSubscription = await Subscription.findOne(
+      {
+        userId: user._id,
+        status: SubscriptionStatus.ACTIVE,
+      },
+      null,
+      { sort: { createdAt: -1 } } // Get most recent subscription
+    );
+
+    // Check if subscription exists and hasn't expired
+    if (activeSubscription && activeSubscription.end_date > new Date()) {
+      subscription = {
+        _id: activeSubscription._id,
+        plan_type: activeSubscription.plan_type,
+        platform: activeSubscription.platform,
+        start_date: activeSubscription.start_date,
+        end_date: activeSubscription.end_date,
+        auto_renew: activeSubscription.auto_renew,
+        status: activeSubscription.status,
+      };
+    }
+  } catch (error) {
+    console.error("Error fetching subscription:", error);
+    // Continue without subscription data if there's an error
+  }
 
   return {
-   user
+    user,
+    subscription, // null if no active subscription or expired
   };
 };
 

@@ -435,6 +435,25 @@ const activateBoost = async (userId: string) => {
   return user;
 };
 
+const updateProfileImagesService = async (
+  userId: string,
+  file: Express.Multer.File
+): Promise<any> => {
+  const result = await fileUploader.uploadToCloudinary(file);
+
+  if (!result?.secure_url) {
+    throw new Error("Image upload failed");
+  }
+
+  const updated = await User.findByIdAndUpdate(
+    userId,
+    { profileImage: result.secure_url },
+    { new: true }
+  ).select("profileImage firstName lastName");
+
+  return updated;
+};
+
 export const userService = {
   createUser,
   createEmailOtp,
@@ -451,4 +470,5 @@ export const userService = {
   isBlockedService,
   deleteUserService,
   activateBoost,
+  updateProfileImagesService,
 }
