@@ -3,7 +3,7 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 export interface ISwipeDocument extends Document {
   fromUser: mongoose.Types.ObjectId;
   toUser: mongoose.Types.ObjectId;
-  action: "like" | "pass" | "gift";
+  action: "like" | "superlike" | "pass" | "gift";
   status: "pending" | "matched" | "ignored";
   expiresAt?: Date;
   createdAt: Date;
@@ -24,7 +24,7 @@ const SwipeSchema: Schema<ISwipeDocument> = new Schema(
     },
     action: {
       type: String,
-      enum: ["like", "pass", "gift"],
+      enum: ["like", "superlike", "pass", "gift"],
       required: true,
     },
     status: {

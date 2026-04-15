@@ -4,6 +4,7 @@ import Match from "./match.model";
 import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
 import Subscription from "../subscription/subscription.model";
+import { Swipe } from "../Swipe/swipe.model";
 import { Plan } from "../subscription/subscription.interface";
 
 const calculateAge = (birthdate: Date): number => {
@@ -38,10 +39,17 @@ export const getMyMatches = catchAsync(async (req: Request, res: Response) => {
     users: currentUserId,
   }).populate("users", " firstName lastName images location birthdate");
 
-  const matchedProfiles = matches.map((match: any) => {
+  const matchedProfiles = await Promise.all(matches.map(async (match: any) => {
     const otherUser = match.users.find(
       (user: any) => user._id.toString() !== currentUserId.toString()
     );
+
+    const superLikeSwipe = await Swipe.findOne({
+      $or: [
+        { fromUser: currentUserId, toUser: otherUser?._id, action: "superlike" },
+        { fromUser: otherUser?._id, toUser: currentUserId, action: "superlike" },
+      ]
+    });
 
     return {
       _id: otherUser?._id,
@@ -52,32 +60,10 @@ export const getMyMatches = catchAsync(async (req: Request, res: Response) => {
       age: otherUser?.birthdate ? calculateAge(otherUser.birthdate) : null,
       status: "matched",
       matchType: match.matchType,
+      isSuperLike: !!superLikeSwipe,
     };
-  });
-  // -------------------------------------------------------------
-      // Subscription Check: Unlimited likes for MULLI_X only
-      // -------------------------------------------------------------
+  }));
 
-
-  const userIds = matchedProfiles.map((p: any) => p._id).filter(Boolean);
-  const activeSubs = await Subscription.find({
-    userId: { $in: userIds },
-    status: "ACTIVE",
-    plan_type: { $in: [Plan.ACE, Plan.EAGLE] }
-  }).select("userId");
-
-  const privilegedUserIds = new Set(activeSubs.map(s => s.userId.toString()));
-
-  matchedProfiles.forEach((p: any) => {
-    p.hasMullix = p._id ? privilegedUserIds.has(p._id.toString()) : false;
-  });
-
-  matchedProfiles.sort((a: any, b: any) => {
-    if (a.hasMullix && !b.hasMullix) return -1;
-    if (!a.hasMullix && b.hasMullix) return 1;
-    return 0;
-  });
-//finish
   sendResponse(res, {
     statusCode: 200,
     success: true,

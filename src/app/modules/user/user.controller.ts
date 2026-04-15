@@ -1,6 +1,6 @@
 import { fileUploader } from "../../helpers/fileUpload";
 import { sendResponse } from "../../utils/sendResponse";
-import {userService} from "./user.service";
+import {appleLogin, userService} from "./user.service";
 import getPlaceNameGoogle from "../../utils/getGoogleLocation";
 import { setAuthCookie } from "../../utils/setCookie";
 
@@ -342,6 +342,73 @@ const activateBoost = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const changeLocation = catchAsync(async (req: Request, res: Response) => {
+  const userId = (req as any).user?.id || (req as any).user?._id;
+  const { lat, lng, placeName } = req.body;
+
+  if (lat === undefined || lng === undefined) {
+    return sendResponse(res, {
+      statusCode: 400,
+      success: false,
+      message: "Latitude (lat) and Longitude (lng) are required",
+      data: null,
+    });
+  }
+
+  const user = await userService.changeLocation(userId, { lat, lng, placeName });
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Location updated successfully",
+    data: user,
+  });
+});
+
+const getAllUsers = catchAsync(async (req: Request, res: Response) => {
+  const users = await userService.getAllUsers();
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "All users fetched successfully",
+    data: users,
+  });
+});
+
+
+export const appleLoginController = async (req: any, res: any) => {
+  try {
+    const { identityToken } = req.body;
+
+    if (!identityToken) {
+      return res.status(400).json({
+        success: false,
+        message: "identityToken required",
+      });
+    }
+
+    const result = await appleLogin(identityToken);
+
+    // ✅ set cookie ONLY if login success
+    if (result.data?.accessToken) {
+      res.cookie("accessToken", result.data.accessToken, {
+        httpOnly: true,
+      });
+
+      res.cookie("refreshToken", result.data.refreshToken, {
+        httpOnly: true,
+      });
+    }
+
+    return res.json(result);
+  } catch (err: any) {
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
 export const userControllers = {
   createUser,
   sendEmailOtp,
@@ -353,5 +420,8 @@ export const userControllers = {
   updateProfileImages,
   deleteAccount,
   activateBoost,
+  getAllUsers,
+  changeLocation,
+  appleLoginController
 };
 

@@ -62,6 +62,7 @@ export const getHomeFeedService = async (): Promise<any[]> => {
   const posts = await Post.find()
     .select("-reports")
     .populate("author", "firstName lastName profileImage skillLevel")
+    .populate("reactions.user", "firstName lastName profileImage")
     .sort({ boostedAt: -1, createdAt: -1 });
 
   return posts;
@@ -274,7 +275,9 @@ export const sendGiftService = async (
       },
     },
     { new: true }
-  );
+  )
+    .populate("author", "firstName lastName profileImage skillLevel")
+    .populate("reactions.user", "firstName lastName profileImage");
 
   if (!updated) {
     throw new Error("Post not found");
@@ -315,7 +318,8 @@ export const replyToCommentService = async (
 export const getPostByIdService = async (postId: string): Promise<any> => {
   const post = await Post.findById(postId)
     .select("-reports")
-    .populate("author", "firstName lastName profileImage skillLevel");
+    .populate("author", "firstName lastName profileImage skillLevel")
+    .populate("reactions.user", "firstName lastName profileImage");
 
   if (!post) {
     throw new Error("Post not found");
@@ -574,7 +578,7 @@ export const boostPostService = async (
 
   // 2. Handle Monthly Reset
   const now = new Date();
-  const lastReset = user.lastClubhouseBoostResetDate || user.createdAt || now;
+  const lastReset = user.lastClubhouseBoostResetDate || now;
   const isNewMonth = 
     now.getMonth() !== lastReset.getMonth() || 
     now.getFullYear() !== lastReset.getFullYear();
@@ -598,7 +602,12 @@ export const boostPostService = async (
   user.clubhouseBoostsUsedThisMonth = (user.clubhouseBoostsUsedThisMonth || 0) + 1;
   await user.save();
 
-  return post;
+  // Return boosted post with populated reactions user details
+  const boostedPost = await Post.findById(postId)
+    .populate("author", "firstName lastName profileImage skillLevel")
+    .populate("reactions.user", "firstName lastName profileImage");
+
+  return boostedPost;
 };
 
 export const postServices = {

@@ -153,7 +153,7 @@ export const likeUser = catchAsync(
         }
       }
 
-      const existingSwipe = await Swipe.findOne({ fromUser, toUser });
+      const existingSwipe = await Swipe.findOne({ fromUser, toUser, action: { $in: ["like", "superlike"] } });
 
       if (existingSwipe) {
         return sendResponse(res, {
@@ -174,7 +174,7 @@ export const likeUser = catchAsync(
       const reverseLike = await Swipe.findOne({
         fromUser: toUser,
         toUser: fromUser,
-        action: "like",
+        action: { $in: ["like", "superlike"] },
       });
 
       if (reverseLike) {
@@ -183,7 +183,7 @@ export const likeUser = catchAsync(
           {
             $or: [
               { fromUser, toUser, action: "like" },
-              { fromUser: toUser, toUser: fromUser, action: "like" },
+              { fromUser: toUser, toUser: fromUser, action: { $in: ["like", "superlike"] } },
             ],
           },
           { status: "matched" }
@@ -274,6 +274,182 @@ export const likeUser = catchAsync(
   }
 );
 
+export const superLikeUser = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const fromUser = (req as any).user?.id;
+      const toUser = req.params.id;
+
+      if (fromUser === toUser) {
+        return sendResponse(res, {
+          statusCode: 400,
+          success: false,
+          message: "Cannot super like yourself",
+          data: null,
+        });
+      }
+
+      // -------------------------------------------------------------
+      // Subscription Check: 1 free, Birdie 3, Eagle 10, Ace unlimited
+      // -------------------------------------------------------------
+      const user = await User.findById(fromUser);
+      if (!user) {
+        return sendResponse(res, { statusCode: 404, success: false, message: "User not found", data: null });
+      }
+
+      const mySubscription = await SubscriptionService.getMySubscription(fromUser);
+      const plan = mySubscription ? (mySubscription.plan_type as Plan) : null;
+
+      let superLikeLimit = 1;
+      if (plan === Plan.BIRDIE) superLikeLimit = 3;
+      if (plan === Plan.EAGLE) superLikeLimit = 10;
+      if (plan === Plan.ACE) superLikeLimit = Infinity;
+
+      const now = new Date();
+      const lastReset = user.lastSuperLikeResetDate || new Date(0);
+      
+      const msIn30Days = 30 * 24 * 60 * 60 * 1000;
+      const isNewBillingCycle = (now.getTime() - lastReset.getTime()) >= msIn30Days;
+
+      if (isNewBillingCycle) {
+        user.superLikesThisMonth = 0;
+        user.lastSuperLikeResetDate = now;
+      }
+
+      if (plan !== Plan.ACE && (user.superLikesThisMonth || 0) >= superLikeLimit) {
+        return sendResponse(res, {
+          statusCode: 403,
+          success: false,
+          message: `You have reached your limit of ${superLikeLimit} super like(s) this month. Upgrade your plan for more!`,
+          data: null,
+        });
+      }
+
+      const existingSwipe = await Swipe.findOne({ fromUser, toUser, action: { $in: ["like", "superlike"] } });
+
+      if (existingSwipe) {
+        return sendResponse(res, {
+          statusCode: 200,
+          success: true,
+          message: "Already liked or super liked",
+          data: { match: false },
+        });
+      }
+
+      await Swipe.create({
+        fromUser,
+        toUser,
+        action: "superlike",
+        status: "pending",
+      });
+
+      if (plan !== Plan.ACE) {
+        user.superLikesThisMonth = (user.superLikesThisMonth || 0) + 1;
+        await user.save();
+      }
+
+      const reverseLike = await Swipe.findOne({
+        fromUser: toUser,
+        toUser: fromUser,
+        action: { $in: ["like", "superlike"] },
+      });
+
+      if (reverseLike) {
+        // Update both swipes to matched
+        await Swipe.updateMany(
+          {
+            $or: [
+              { fromUser, toUser, action: "superlike" },
+              { fromUser: toUser, toUser: fromUser, action: { $in: ["like", "superlike"] } },
+            ],
+          },
+          { status: "matched" }
+        );
+
+        const [u1, u2] = [fromUser, toUser].sort();
+        let matchData = await Match.findOne({ user1: u1, user2: u2 });
+
+        if (!matchData) {
+          matchData = await Match.create({
+            users: [fromUser, toUser],
+            user1: u1,
+            user2: u2,
+            matchType: "mutual_like",
+          });
+        }
+
+        await NotificationService.notifyNewMatch(
+          fromUser,
+          toUser as string,
+          matchData._id.toString()
+        );
+
+        return sendResponse(res, {
+          statusCode: 200,
+          success: true,
+          message: "It's a match!",
+          data: { match: true, matchData },
+        });
+      }
+
+      // Start Automatic Matching Check
+      const targetUser = await User.findById(toUser);
+
+      if (user && targetUser) {
+        const isCompatible = checkCompatibility(user, targetUser);
+
+        if (isCompatible) {
+          // Update current swipe to matched
+          await Swipe.updateOne(
+            { fromUser, toUser, action: "superlike" },
+            { status: "matched" }
+          );
+
+          const [u1, u2] = [fromUser, toUser].sort();
+          let matchData = await Match.findOne({ user1: u1, user2: u2 });
+
+          if (!matchData) {
+            matchData = await Match.create({
+              users: [fromUser, toUser],
+              user1: u1,
+              user2: u2,
+              matchType: "profile_based",
+            });
+          }
+
+          await NotificationService.notifyNewMatch(
+            fromUser,
+            toUser as string,
+            matchData._id.toString()
+          );
+
+          return sendResponse(res, {
+            statusCode: 200,
+            success: true,
+            message: "It's a profile based match!",
+            data: { match: true, matchData },
+          });
+        }
+      }
+      // End Automatic Matching Check
+
+      const senderName = user
+        ? `${user.firstName || ""} ${user.lastName || ""}`.trim()
+        : "Someone";
+      await NotificationService.notifyNewLike(toUser as string, fromUser, senderName);
+
+      sendResponse(res, {
+        statusCode: 200,
+        success: true,
+        message: "Super Liked successfully",
+        data: { match: false },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 // export const giftUser = catchAsync(async (req: Request, res: Response) => {
 //   const fromUser = (req as any).user?.id;
 //   const { toUser, coins } = req.body as { toUser: string; coins: number };
@@ -319,7 +495,7 @@ export const getUsersWhoLikedMe = catchAsync(
 
     const swipes = await Swipe.find({
       toUser: myId,
-      action: "like",
+      action: { $in: ["like", "superlike"] },
     }).populate("fromUser", "firstName lastName images birthdate");
 
     const usersWhoLikedMe = swipes.map((swipe: any) => {
@@ -331,29 +507,10 @@ export const getUsersWhoLikedMe = catchAsync(
         images: user?.images,
         age: user?.birthdate ? calculateAge(user.birthdate) : null,
         status: swipe.status,
+        action: swipe.action,
+        isSuperLike: swipe.action === "superlike",
       };
-
     });
-
-    const userIds = usersWhoLikedMe.map((u: any) => u._id).filter(Boolean);
-    const activeSubs = await Subscription.find({
-      userId: { $in: userIds },
-      status: "ACTIVE",
-      plan_type: { $in: [Plan.ACE, Plan.EAGLE] }
-    }).select("userId");
-
-    const privilegedUserIds = new Set(activeSubs.map(s => s.userId.toString()));
-
-    usersWhoLikedMe.forEach((u: any) => {
-      u.hasMullix = u._id ? privilegedUserIds.has(u._id.toString()) : false;
-    });
-
-    usersWhoLikedMe.sort((a: any, b: any) => {
-      if (a.hasMullix && !b.hasMullix) return -1;
-      if (!a.hasMullix && b.hasMullix) return 1;
-      return 0;
-    });
-//finish
     sendResponse(res, {
       statusCode: 200,
       success: true,
@@ -369,7 +526,7 @@ export const getUsersILiked = catchAsync(
 
     const swipes = await Swipe.find({
       fromUser: myId,
-      action: "like",
+      action: { $in: ["like", "superlike"] },
     }).populate("toUser", "firstName lastName images birthdate");
 
     const likedUsers = swipes.map((swipe: any) => {
@@ -381,28 +538,9 @@ export const getUsersILiked = catchAsync(
         images: user?.images,
         age: user?.birthdate ? calculateAge(user.birthdate) : null,
         status: swipe.status,
+        action: swipe.action,
+        isSuperLike: swipe.action === "superlike",
       };
-    });
-
-    
-
-    const userIds = likedUsers.map((u: any) => u._id).filter(Boolean);
-    const activeSubs = await Subscription.find({
-      userId: { $in: userIds },
-      status: "ACTIVE",
-      plan_type: { $in: [Plan.ACE, Plan.EAGLE] }
-    }).select("userId");
-
-    const privilegedUserIds = new Set(activeSubs.map(s => s.userId.toString()));
-
-    likedUsers.forEach((u: any) => {
-      u.hasMullix = u._id ? privilegedUserIds.has(u._id.toString()) : false;
-    });
-
-    likedUsers.sort((a: any, b: any) => {
-      if (a.hasMullix && !b.hasMullix) return -1;
-      if (!a.hasMullix && b.hasMullix) return 1;
-      return 0;
     });
 
     sendResponse(res, {

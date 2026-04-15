@@ -301,56 +301,7 @@ const updateUserProfileService = async (
   }
 
   // Handle location if lat/lng provided
-  if (bodyData.lat && bodyData.lng) {
-    const user = await User.findById(userId);
-    if (!user) throw new Error("User not found");
-
-    const mySubscription = await SubscriptionService.getMySubscription(userId);
-    const plan = mySubscription?.plan_type as Plan;
-
-    let limit = 0;
-    if (plan === Plan.ACE) limit = Infinity;
-    else if (plan === Plan.EAGLE) limit = 5;
-    else if (plan === Plan.BIRDIE) limit = 2;
-    // else 0 (Free)
-
-    // We only restrict changes IF the user has already completed their profile setup
-    if (user.isProfileComplete) {
-      if (limit === 0) {
-        throw new Error("Location changes are not allowed for Free users. Upgrade to Birdie, Eagle, or Ace.");
-      }
-
-      const now = new Date();
-      const lastReset = user.lastLocationChangeResetDate || new Date(0);
-      const isNewMonth = 
-        now.getMonth() !== lastReset.getMonth() || 
-        now.getFullYear() !== lastReset.getFullYear();
-
-      let usedThisMonth = user.locationChangesUsedThisMonth || 0;
-
-      if (isNewMonth) {
-        usedThisMonth = 0;
-        updateData.lastLocationChangeResetDate = now;
-      }
-
-      if (usedThisMonth >= limit && limit !== Infinity) {
-        throw new Error(`Monthly location change limit reached (${limit}). Upgrade for more.`);
-      }
-
-      updateData.locationChangesUsedThisMonth = usedThisMonth + 1;
-      updateData.lastLocationChangeResetDate = isNewMonth ? now : lastReset;
-    }
-
-    const lat = parseFloat(bodyData.lat);
-    const lng = parseFloat(bodyData.lng);
-    const placeName = await getPlaceNameGoogle(lat, lng);
-
-    updateData.location = {
-      type: "Point",
-      coordinates: [lng, lat],
-      placeName,
-    };
-  }
+  
 
   const updatedUser = await User.findByIdAndUpdate(
     new mongoose.Types.ObjectId(userId),
@@ -435,6 +386,63 @@ const activateBoost = async (userId: string) => {
   return user;
 };
 
+const changeLocation = async (userId: string, data: { lat: number; lng: number; placeName?: string }) => {
+  const user = await User.findById(userId);
+  if (!user) throw new Error("User not found");
+
+  const mySubscription = await SubscriptionService.getMySubscription(userId);
+
+  const plan = mySubscription ? (mySubscription.plan_type as Plan) : null;
+  
+  let changeLimit = 0;
+  if (plan === Plan.ACE) {
+    changeLimit = Infinity;
+  } else if (plan === Plan.EAGLE) {
+    changeLimit = 5;
+  } else if (plan === Plan.BIRDIE) {
+    changeLimit = 1;
+  } else {
+    throw new Error("Changing location is restricted for free users. Please upgrade to Birdie, Eagle, or Ace plan.");
+  }
+
+  const now = new Date();
+  
+  const lastReset = user.lastLocationChangeResetDate || new Date(0);
+  
+  // Check if 30 days have passed since the last reset
+  // Using 30 days accurately reflects a monthly billing cycle even if bought mid-month
+  const msIn30Days = 30 * 24 * 60 * 60 * 1000;
+  const isNewBillingCycle = (now.getTime() - lastReset.getTime()) >= msIn30Days;
+
+  if (isNewBillingCycle) {
+    user.locationChangesThisMonth = 0;
+    // Set the reset date to today so they have another 30 days from now to use their fresh changes
+    user.lastLocationChangeResetDate = now;
+  }
+
+  if (plan !== Plan.ACE && (user.locationChangesThisMonth || 0) >= changeLimit) {
+    throw new Error(`You have used your ${changeLimit} monthly location change(s).`);
+  }
+
+  let name = data.placeName;
+  if (!name) {
+    name = await getPlaceNameGoogle(data.lat, data.lng);
+  }
+
+  user.location = {
+    type: "Point",
+    coordinates: [data.lng, data.lat],
+    placeName: name,
+  };
+
+  if (plan !== Plan.ACE) {
+    user.locationChangesThisMonth = (user.locationChangesThisMonth || 0) + 1;
+  }
+
+  await user.save();
+  return user;
+};
+
 const updateProfileImagesService = async (
   userId: string,
   file: Express.Multer.File
@@ -454,6 +462,60 @@ const updateProfileImagesService = async (
   return updated;
 };
 
+const getAllUsers = async (): Promise<any[]> => {
+  const users = await User.find().select("-password");
+  return users;
+};
+
+import { verifyAppleToken } from "../../utils/appleVerify";
+
+
+
+export const appleLogin = async (identityToken: string) => {
+  const appleUser: any = await verifyAppleToken(identityToken);
+
+  const appleId = appleUser.sub;
+  const email = appleUser.email;
+
+  let user = await User.findOne({ appleId });
+
+  // ✅ CASE 1: Existing user + profile complete → LOGIN
+  if (user && user.isProfileComplete) {
+    const tokens = createUserTokens(user.toObject());
+
+    return {
+      success: true,
+      message: "Login successful",
+      data: {
+        user,
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+      },
+    };
+  }
+
+  // ✅ CASE 2: New user → create partial account
+  if (!user) {
+    user = await User.create({
+      appleId,
+      email,
+      provider: "apple",
+      isEmailVerified: true,
+      isProfileComplete: false,
+    });
+  }
+
+  // ❌ NO TOKEN YET (profile not complete)
+  return {
+    success: true,
+    message: "Complete your profile",
+    data: {
+      userId: user._id,
+      isProfileComplete: user.isProfileComplete,
+    },
+  };
+};
+
 export const userService = {
   createUser,
   createEmailOtp,
@@ -471,4 +533,7 @@ export const userService = {
   deleteUserService,
   activateBoost,
   updateProfileImagesService,
+  getAllUsers,
+  changeLocation,
+  appleLogin
 }

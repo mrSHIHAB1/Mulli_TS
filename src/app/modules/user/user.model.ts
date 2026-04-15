@@ -92,6 +92,8 @@ const UserSchema: Schema<IUser> = new Schema(
     },
     useLocation: { type: Boolean, default: false },
     reciveNotifications: { type: Boolean, default: true },
+    appleId: { type: String, index: true },
+provider: { type: String, enum: ["apple", "google", "phone", "email"] },
     profileImage: { type: String },
     enableFaceId: { type: Boolean, default: false },
     badgePoints: { type: Number, default: 0 },
@@ -133,12 +135,17 @@ const UserSchema: Schema<IUser> = new Schema(
     boostsUsedThisMonth: { type: Number, default: 0 },
     lastBoostResetDate: { type: Date, default: null },
 
-    locationChangesUsedThisMonth: { type: Number, default: 0 },
-    lastLocationChangeResetDate: { type: Date, default: null },
-
     // Clubhouse Post Boost fields
     clubhouseBoostsUsedThisMonth: { type: Number, default: 0 },
     lastClubhouseBoostResetDate: { type: Date, default: null },
+
+    // Location changes tracking
+    locationChangesThisMonth: { type: Number, default: 0 },
+    lastLocationChangeResetDate: { type: Date, default: null },
+
+    // Super Like tracking fields
+    superLikesThisMonth: { type: Number, default: 0 },
+    lastSuperLikeResetDate: { type: Date, default: null },
   },
 
   { timestamps: true }

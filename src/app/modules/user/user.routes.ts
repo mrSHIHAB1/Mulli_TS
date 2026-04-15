@@ -17,6 +17,9 @@ router.post("/signup/email/verify", userControllers.verifyEmailOtp);
 router.post("/signup/phone", userControllers.sendPhoneOtp);
 router.post("/signup/phone/verify", userControllers.verifyPhoneOtp);
 
+//apple signup flow
+router.post("/auth/apple", userControllers.appleLoginController);
+
 // Complete User Profile
 router.patch("/profile/complete",fileUploader.upload.array("image", 6),userControllers.createUser);
 
@@ -28,7 +31,9 @@ router.get("/blocked",checkAuth(...Object.values(Role)), getBlockedUsers); // Li
 router.patch("/profile",checkAuth(...Object.values(Role)), userControllers.updateUserProfile);
 router.patch("/profile/image", checkAuth(...Object.values(Role)), fileUploader.upload.single("image"), userControllers.updateProfileImages);
 router.post("/profile/boost", checkAuth(...Object.values(Role)), userControllers.activateBoost);
+router.patch("/profile/location", checkAuth(...Object.values(Role)), userControllers.changeLocation);
 router.delete("/delete-account",checkAuth(...Object.values(Role)), userControllers.deleteAccount);
+router.get("/all", checkAuth(...Object.values(Role)), userControllers.getAllUsers);
 
 export const userRoutes = router;
 

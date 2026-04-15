@@ -103,6 +103,7 @@ const verifyPurchase = async (payload: {
 
   // --- 5. Resolve existing subscription by originalTransactionId ---
   const existingSub = await Subscription.findOne({
+    
     userId,
     originalTransactionId,
   });
@@ -232,25 +233,29 @@ const verifyPurchase = async (payload: {
     if (billingCycle === "1y") amount = planConfig?.yearlyPrice || 0;
 
 
-    await PaymentTransaction.create({
+    // Inside verifyPurchase try-catch block (Step 10)
+await PaymentTransaction.findOneAndUpdate(
+  { transactionId },
+  {
+    $set: {
       userId,
-      subscriptionId: existingSub ? existingSub._id : newSub?._id,
-      transactionId,
+      subscriptionId: existingSub ? existingSub?._id : newSub?._id,
       originalTransactionId,
       transactionType: PaymentTransactionType.PURCHASE,
       status: PaymentTransactionStatus.COMPLETED,
       platform: PaymentPlatform.APPLE_IAP,
-      productId:transaction.productId,
-      amount: Math.round(amount * 100), // Convert to cents
-      currency: transaction.currency ,
+      productId: transaction.productId,
+      amount: Math.round(amount * 100),
+      currency: transaction.currency,
       planType: resolvedPlan,
       billingCycle,
       purchaseDate,
       expiryDate: new Date(expiryMs),
-      metadata: {
-        rawTransaction: transaction,
-      },
-    });
+      metadata: { rawTransaction: transaction },
+    }
+  },
+  { upsert: true, new: true }
+);
   } catch (error) {
     console.error("Failed to log payment transaction:", error);
     // We don't throw here to avoid failing the purchase verification 
@@ -369,29 +374,27 @@ const handleAppleWebhook = async (req: Request) => {
         status = PaymentTransactionStatus.REFUNDED;
       }
 
-      await PaymentTransaction.create({
-        userId: updated.userId,
-        subscriptionId: updated._id,
-        transactionId,
-        originalTransactionId,
-        transactionType,
-        status,
-        platform: PaymentPlatform.APPLE_IAP,
-        productId: transaction.productId,
-        amount: 0, // Webhook might not have amount, or use 0 for status changes
-        currency: "USD",
-        purchaseDate: transaction.purchaseDate
-          ? new Date(transaction.purchaseDate)
-          : new Date(),
-        expiryDate: transaction.expiresDate
-          ? new Date(transaction.expiresDate)
-          : undefined,
-        webhookEventType: eventType,
-        webhookPayload: payload,
-        metadata: {
-          rawTransaction: transaction,
-        },
-      });
+      // Inside handleAppleWebhook try-catch block
+await PaymentTransaction.findOneAndUpdate(
+  { transactionId }, // Look for this ID
+  {
+    $set: {
+      userId: updated.userId,
+      subscriptionId: updated._id,
+      originalTransactionId,
+      transactionType,
+      status,
+      platform: PaymentPlatform.APPLE_IAP,
+      productId: transaction.productId,
+      purchaseDate: transaction.purchaseDate ? new Date(transaction.purchaseDate) : new Date(),
+      expiryDate: transaction.expiresDate ? new Date(transaction.expiresDate) : undefined,
+      webhookEventType: eventType,
+      webhookPayload: payload,
+      metadata: { rawTransaction: transaction },
+    }
+  },
+  { upsert: true, new: true } // Create if doesn't exist, update if it does
+);
 
     } catch (error) {
       console.error("Failed to log webhook transaction history:", error);

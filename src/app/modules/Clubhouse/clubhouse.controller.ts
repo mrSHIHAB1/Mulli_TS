@@ -343,7 +343,7 @@ const boostPost = catchAsync(async (req: Request, res: Response) => {
   const currentUser: any = (req as any).user;
   const { id } = req.params;
 
-  const result = await postServices.boostPostService(currentUser.id, id);
+  const result = await postServices.boostPostService(currentUser.id, id as string);
 
   sendResponse(res, {
     success: true,

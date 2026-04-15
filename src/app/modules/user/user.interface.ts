@@ -116,6 +116,9 @@ export interface IUser {
   };
   useLocation?: boolean;
   reciveNotifications?: boolean;
+  
+  appleId: { type: String, index: true },
+provider: { type: String, enum: ["apple", "google", "phone", "email"] },
   profileImage?: string;
   enableFaceId?: boolean;
   badgePoints?: number;
@@ -136,12 +139,18 @@ export interface IUser {
   boostsUsedThisMonth?: number;
   lastBoostResetDate?: Date | null;
 
-  locationChangesUsedThisMonth?: number;
-  lastLocationChangeResetDate?: Date | null;
 
   // Clubhouse Boost fields
   clubhouseBoostsUsedThisMonth?: number;
   lastClubhouseBoostResetDate?: Date | null;
+
+  // Location tracking fields
+  locationChangesThisMonth?: number;
+  lastLocationChangeResetDate?: Date | null;
+
+  // Super Like tracking fields
+  superLikesThisMonth?: number;
+  lastSuperLikeResetDate?: Date | null;
 }
 
 
