@@ -116,9 +116,9 @@ export interface IUser {
   };
   useLocation?: boolean;
   reciveNotifications?: boolean;
-  
+
   appleId: { type: String, index: true },
-provider: { type: String, enum: ["apple", "google", "phone", "email"] },
+  provider: { type: String, enum: ["apple", "google", "phone", "email"] },
   profileImage?: string;
   enableFaceId?: boolean;
   badgePoints?: number;

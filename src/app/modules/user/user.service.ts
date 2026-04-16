@@ -11,6 +11,8 @@ import getPlaceNameGoogle from "../../utils/getGoogleLocation";
 import { fileUploader } from "../../helpers/fileUpload";
 import { SubscriptionService } from "../subscription/subscription.service";
 import { Plan } from "../subscription/subscription.interface";
+import { verifyAppleToken } from "../../utils/appleVerify";
+
 
 const OTP_EXPIRE = 5 * 60; // 3 minutes
 
@@ -301,7 +303,7 @@ const updateUserProfileService = async (
   }
 
   // Handle location if lat/lng provided
-  
+
 
   const updatedUser = await User.findByIdAndUpdate(
     new mongoose.Types.ObjectId(userId),
@@ -349,7 +351,7 @@ const activateBoost = async (userId: string) => {
   if (!mySubscription) throw new Error("Active subscription required to boost profile");
 
   const plan = mySubscription.plan_type as Plan;
-  
+
   let boostLimit = 0;
   if (plan === Plan.EAGLE) {
     boostLimit = 2;
@@ -362,11 +364,11 @@ const activateBoost = async (userId: string) => {
   }
 
   const now = new Date();
-  
+
   // Reset monthly counter if it's a new month
   const lastReset = user.lastBoostResetDate || new Date(0);
-  const isNewMonth = 
-    now.getMonth() !== lastReset.getMonth() || 
+  const isNewMonth =
+    now.getMonth() !== lastReset.getMonth() ||
     now.getFullYear() !== lastReset.getFullYear();
 
   if (isNewMonth) {
@@ -393,7 +395,7 @@ const changeLocation = async (userId: string, data: { lat: number; lng: number; 
   const mySubscription = await SubscriptionService.getMySubscription(userId);
 
   const plan = mySubscription ? (mySubscription.plan_type as Plan) : null;
-  
+
   let changeLimit = 0;
   if (plan === Plan.ACE) {
     changeLimit = Infinity;
@@ -406,9 +408,9 @@ const changeLocation = async (userId: string, data: { lat: number; lng: number; 
   }
 
   const now = new Date();
-  
+
   const lastReset = user.lastLocationChangeResetDate || new Date(0);
-  
+
   // Check if 30 days have passed since the last reset
   // Using 30 days accurately reflects a monthly billing cycle even if bought mid-month
   const msIn30Days = 30 * 24 * 60 * 60 * 1000;
@@ -467,17 +469,38 @@ const getAllUsers = async (): Promise<any[]> => {
   return users;
 };
 
-import { verifyAppleToken } from "../../utils/appleVerify";
-
 
 
 export const appleLogin = async (identityToken: string) => {
+
   const appleUser: any = await verifyAppleToken(identityToken);
+ 
 
   const appleId = appleUser.sub;
   const email = appleUser.email;
 
+  // 1. Try finding by appleId
   let user = await User.findOne({ appleId });
+
+  // 2. If not found by appleId, try finding by email and link
+  if (!user && email) {
+    user = await User.findOne({ email });
+    if (user) {
+      user.appleId = appleId;
+      user.isEmailVerified = true;
+      await user.save();
+    }
+  }
+
+  // 3. If still no user, create a new one
+  if (!user) {
+    user = await User.create({
+      appleId,
+      email,
+      isEmailVerified: true,
+      isProfileComplete: false,
+    });
+  }
 
   // ✅ CASE 1: Existing user + profile complete → LOGIN
   if (user && user.isProfileComplete) {
@@ -487,30 +510,24 @@ export const appleLogin = async (identityToken: string) => {
       success: true,
       message: "Login successful",
       data: {
-        user,
+        user: {
+          id: user._id,
+          name: user.firstName || user.name,
+          isProfileComplete: user.isProfileComplete,
+        },
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
       },
     };
   }
 
-  // ✅ CASE 2: New user → create partial account
-  if (!user) {
-    user = await User.create({
-      appleId,
-      email,
-      provider: "apple",
-      isEmailVerified: true,
-      isProfileComplete: false,
-    });
-  }
-
-  // ❌ NO TOKEN YET (profile not complete)
+  // ✅ CASE 2: New/Incomplete user → prompt profile completion
   return {
     success: true,
     message: "Complete your profile",
     data: {
       userId: user._id,
+      isEmailVerified: true,
       isProfileComplete: user.isProfileComplete,
     },
   };

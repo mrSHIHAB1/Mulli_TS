@@ -61,7 +61,7 @@ export const createPostService = async (
 export const getHomeFeedService = async (): Promise<any[]> => {
   const posts = await Post.find()
     .select("-reports")
-    .populate("author", "firstName lastName profileImage skillLevel")
+    .populate("author", "firstName lastName profileImage skillLevel badgePoints")
     .populate("reactions.user", "firstName lastName profileImage")
     .sort({ boostedAt: -1, createdAt: -1 });
 

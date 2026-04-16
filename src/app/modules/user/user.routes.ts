@@ -18,7 +18,7 @@ router.post("/signup/phone", userControllers.sendPhoneOtp);
 router.post("/signup/phone/verify", userControllers.verifyPhoneOtp);
 
 //apple signup flow
-router.post("/auth/apple", userControllers.appleLoginController);
+router.post("/signup/apple", userControllers.appleLoginController);
 
 // Complete User Profile
 router.patch("/profile/complete",fileUploader.upload.array("image", 6),userControllers.createUser);

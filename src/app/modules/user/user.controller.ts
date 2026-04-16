@@ -18,7 +18,15 @@ const createUser = catchAsync(
       } else {
         bodyData = req.body;
       }
-
+      console.log("Parsed body data:", bodyData);
+//  if (!bodyData.email || !bodyData.phone) {
+//         return sendResponse(res, {
+//           statusCode: 400,
+//           success: false,
+//           message: "Email and phone are required",
+//           data: null,
+//         });
+//       }
       const files = req.files as Express.Multer.File[] | undefined;
 
       if (files && files.length > 0) {
@@ -377,35 +385,41 @@ const getAllUsers = catchAsync(async (req: Request, res: Response) => {
 });
 
 
-export const appleLoginController = async (req: any, res: any) => {
+export const appleLoginController = async (req: Request, res: Response) => {
   try {
     const { identityToken } = req.body;
 
     if (!identityToken) {
-      return res.status(400).json({
+      return sendResponse(res, {
+        statusCode: 400,
         success: false,
         message: "identityToken required",
+        data: null,
       });
     }
 
     const result = await appleLogin(identityToken);
 
     // ✅ set cookie ONLY if login success
-    if (result.data?.accessToken) {
-      res.cookie("accessToken", result.data.accessToken, {
-        httpOnly: true,
-      });
-
-      res.cookie("refreshToken", result.data.refreshToken, {
-        httpOnly: true,
+    if (result.success && result.data?.accessToken && result.data?.refreshToken) {
+      setAuthCookie(res, {
+        accessToken: result.data.accessToken,
+        refreshToken: result.data.refreshToken,
       });
     }
 
-    return res.json(result);
+    sendResponse(res, {
+      statusCode: result.success ? 200 : 400,
+      success: result.success,
+      message: result.message,
+      data: result.data || null,
+    });
   } catch (err: any) {
-    return res.status(500).json({
+    sendResponse(res, {
+      statusCode: 500,
       success: false,
       message: err.message,
+      data: null,
     });
   }
 };
