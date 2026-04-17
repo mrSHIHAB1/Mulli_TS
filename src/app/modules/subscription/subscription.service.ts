@@ -1,6 +1,6 @@
 import { Types } from "mongoose";
 import Subscription from "./subscription.model";
-import { ISubscription, SubscriptionStatus } from "./subscription.interface";
+import { ISubscription, Plan, SubscriptionStatus } from "./subscription.interface";
 import AppError from "../../errorHelpers/AppError";
 import { StatusCodes } from "http-status-codes";
 import {
@@ -8,7 +8,33 @@ import {
   getCachedUserSubscription,
   invalidateUserSubscriptionCache,
 } from "../../helpers/redisCache.helper";
+import User from "../user/user.model";
+export const PLAN_TIERS: Record<string, number> = {
+  [Plan.FREE]: 0,
+  [Plan.BIRDIE]: 1,
+  [Plan.EAGLE]: 2,
+  [Plan.ACE]: 3,
+};
 
+export const handlePlanUpgradeUsage = async (userId: string, oldPlan: string, newPlan: string) => {
+  const oldTier = PLAN_TIERS[oldPlan] || 0;
+  const newTier = PLAN_TIERS[newPlan] || 0;
+console.log("oldTier",oldTier);
+console.log("newTier",newTier);
+
+  if (newTier > oldTier) {
+    // Reset usage for ANY upgrade (Free to Paid or Lower Paid to Higher Paid)
+    await User.findByIdAndUpdate(userId, {
+      $set: {
+        superLikesThisMonth: 0,
+        lastSuperLikeResetDate: new Date(),
+        boostsUsedThisMonth: 0,
+        lastBoostResetDate: new Date()
+      }
+    });
+    console.log(`User ${userId} upgraded from ${oldPlan} to ${newPlan}. Reseting super like and boost usage.`);
+  }
+};
 const createSubscription = async (payload: ISubscription) => {
   // Check if user has an active subscription already
   const existingSub = await Subscription.findOne({
@@ -92,6 +118,10 @@ const updateSubscriptionStatus = async (
   transactionId: string,
   updateData: { status: string; plan_type?: string } // Accept additional fields
 ) => {
+  // Capture old subscription to compare plans
+  // const existingSub = await Subscription.findOne({ transactionId });
+  // const oldPlan = existingSub ? existingSub.plan_type : Plan.FREE;
+
   const subscription = await Subscription.findOneAndUpdate(
     { transactionId },
     { ...updateData, updatedAt: new Date() }, // Spread all fields from updateData
@@ -102,10 +132,16 @@ const updateSubscriptionStatus = async (
     throw new AppError(StatusCodes.NOT_FOUND, "Subscription not found");
   }
 
+  // // Handle plan upgrade usage logic if plan changed
+  // if (updateData.plan_type && updateData.plan_type !== oldPlan) {
+  //   await handlePlanUpgradeUsage(subscription.userId.toString(), oldPlan, updateData.plan_type);
+  // }
+
   // Invalidate user subscription cache
   const userId = subscription.userId.toString();
   console.log(`Invalidating cache for user ${userId} due to subscription update`);
   await invalidateUserSubscriptionCache(userId);
+  
 
   return subscription;
 };

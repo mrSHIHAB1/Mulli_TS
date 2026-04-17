@@ -59,13 +59,43 @@ export const createPostService = async (
 };
 
 export const getHomeFeedService = async (): Promise<any[]> => {
-  const posts = await Post.find()
-    .select("-reports")
-    .populate("author", "firstName lastName profileImage skillLevel badgePoints")
-    .populate("reactions.user", "firstName lastName profileImage")
-    .sort({ boostedAt: -1, createdAt: -1 });
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-  return posts;
+  const posts = await Post.aggregate([
+    {
+      $addFields: {
+        sortBoostedAt: {
+          $cond: {
+            if: {
+              $and: [
+                { $ne: ["$boostedAt", null] },
+                { $gte: ["$boostedAt", oneDayAgo] },
+              ],
+            },
+            then: "$boostedAt",
+            else: null,
+          },
+        },
+      },
+    },
+    {
+      $sort: {
+        sortBoostedAt: -1,
+        createdAt: -1,
+      },
+    },
+    {
+      $project: {
+        reports: 0,
+        sortBoostedAt: 0,
+      },
+    },
+  ]);
+
+  return Post.populate(posts, [
+    { path: "author", select: "firstName lastName profileImage skillLevel badgePoints" },
+    { path: "reactions.user", select: "firstName lastName profileImage" },
+  ]);
 };
 
 
@@ -578,8 +608,9 @@ export const boostPostService = async (
 
   // 2. Handle Monthly Reset
   const now = new Date();
-  const lastReset = user.lastClubhouseBoostResetDate || now;
+  const lastReset = user.lastClubhouseBoostResetDate;
   const isNewMonth = 
+    !lastReset ||
     now.getMonth() !== lastReset.getMonth() || 
     now.getFullYear() !== lastReset.getFullYear();
 

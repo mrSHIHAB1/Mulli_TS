@@ -20,6 +20,7 @@ const subscriptionSchema = new Schema<ISubscription>(
 
     total_spent: { type: Number, default: 0 },
     renewal_date: { type: Date },
+    metadata: { type: Schema.Types.Mixed },
   },
   { timestamps: true },
 );

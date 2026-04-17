@@ -67,6 +67,7 @@ export const discoveryService = async (
     isProfileComplete: true,
     isDeleted: false,
     isblocked: false,
+    isIncognito: { $ne: true },
     ...ageFilter,
   };
 

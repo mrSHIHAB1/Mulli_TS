@@ -151,6 +151,8 @@ export interface IUser {
   // Super Like tracking fields
   superLikesThisMonth?: number;
   lastSuperLikeResetDate?: Date | null;
+
+  isIncognito?: boolean;
 }
 
 

@@ -373,6 +373,18 @@ const changeLocation = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const toggleIncognitoMode = catchAsync(async (req: Request, res: Response) => {
+  const userId = (req as any).user?.id || (req as any).user?._id;
+  const result = await userService.toggleIncognitoMode(userId);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: `Incognito mode ${result.isIncognito ? "enabled" : "disabled"}`,
+    data: result,
+  });
+});
+
 const getAllUsers = catchAsync(async (req: Request, res: Response) => {
   const users = await userService.getAllUsers();
 
@@ -436,6 +448,7 @@ export const userControllers = {
   activateBoost,
   getAllUsers,
   changeLocation,
-  appleLoginController
+  appleLoginController,
+  toggleIncognitoMode
 };
 

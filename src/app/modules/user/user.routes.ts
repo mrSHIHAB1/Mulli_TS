@@ -31,6 +31,7 @@ router.get("/blocked",checkAuth(...Object.values(Role)), getBlockedUsers); // Li
 router.patch("/profile",checkAuth(...Object.values(Role)), userControllers.updateUserProfile);
 router.patch("/profile/image", checkAuth(...Object.values(Role)), fileUploader.upload.single("image"), userControllers.updateProfileImages);
 router.post("/profile/boost", checkAuth(...Object.values(Role)), userControllers.activateBoost);
+router.patch("/profile/incognito", checkAuth(...Object.values(Role)), userControllers.toggleIncognitoMode);
 router.patch("/profile/location", checkAuth(...Object.values(Role)), userControllers.changeLocation);
 router.delete("/delete-account",checkAuth(...Object.values(Role)), userControllers.deleteAccount);
 router.get("/all", checkAuth(...Object.values(Role)), userControllers.getAllUsers);

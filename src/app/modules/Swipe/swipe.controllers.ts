@@ -308,19 +308,21 @@ console.log("My Subscription:", mySubscription);
       const now = new Date();
       const lastReset = user.lastSuperLikeResetDate || new Date(0);
       
-      const msIn30Days = 30 * 24 * 60 * 60 * 1000;
-      const isNewBillingCycle = (now.getTime() - lastReset.getTime()) >= msIn30Days;
+      const msIn7Days = 7 * 24 * 60 * 60 * 1000;
+      const isNewBillingCycle = (now.getTime() - lastReset.getTime()) >= msIn7Days;
 
       if (isNewBillingCycle) {
         user.superLikesThisMonth = 0;
+        console.log("New billing cycle detected. Resetting super like count.",user.superLikesThisMonth);
         user.lastSuperLikeResetDate = now;
       }
 
       if (plan !== Plan.ACE && (user.superLikesThisMonth || 0) >= superLikeLimit) {
+        console.log("superlike limit", superLikeLimit,"user.superLikesThisMonth",user.superLikesThisMonth);
         return sendResponse(res, {
           statusCode: 403,
           success: false,
-          message: `You have reached your limit of ${superLikeLimit} super like(s) this month. Upgrade your plan for more!`,
+          message: `You have reached your limit of ${superLikeLimit} super like(s) this week. Upgrade your plan for more!`,
           data: null,
         });
       }

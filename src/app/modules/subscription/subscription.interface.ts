@@ -37,6 +37,7 @@ export interface ISubscription {
   total_spent: number;
 
   renewal_date?: Date;
+  metadata?: any;
 
   createdAt?: Date;
   updatedAt?: Date;

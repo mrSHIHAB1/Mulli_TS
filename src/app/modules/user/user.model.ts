@@ -146,6 +146,8 @@ provider: { type: String, enum: ["apple", "google", "phone", "email"] },
     // Super Like tracking fields
     superLikesThisMonth: { type: Number, default: 0 },
     lastSuperLikeResetDate: { type: Date, default: null },
+
+    isIncognito: { type: Boolean, default: false },
   },
 
   { timestamps: true }

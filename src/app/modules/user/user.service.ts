@@ -469,7 +469,19 @@ const getAllUsers = async (): Promise<any[]> => {
   return users;
 };
 
+const toggleIncognitoMode = async (userId: string): Promise<any> => {
+  const user = await User.findById(userId);
+  if (!user) throw new Error("User not found");
 
+  const mySubscription = await SubscriptionService.getMySubscription(userId);
+  if (!mySubscription || mySubscription.plan_type !== Plan.ACE) {
+    throw new Error("Incognito mode is only available for Ace subscribers");
+  }
+
+  user.isIncognito = !user.isIncognito;
+  await user.save();
+  return user;
+};
 
 export const appleLogin = async (identityToken: string) => {
 
@@ -552,5 +564,6 @@ export const userService = {
   updateProfileImagesService,
   getAllUsers,
   changeLocation,
-  appleLogin
+  appleLogin,
+  toggleIncognitoMode
 }

@@ -150,6 +150,7 @@ const verifyPurchase = async (payload: {
     start_date: purchaseDate,
     end_date: new Date(expiryMs),
     auto_renew: transaction.type === "Auto-Renewable Subscription",
+    metadata: transaction,
   });
 
   await newSub.save();
