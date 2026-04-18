@@ -10,6 +10,7 @@ import { NotificationService } from "../notification/notification.service";
 import { SubscriptionService } from "../subscription/subscription.service";
 import { Plan } from "../subscription/subscription.interface";
 import Subscription from "../subscription/subscription.model";
+import { time } from "node:console";
 
 const calculateAge = (birthdate: Date): number => {
   const diffMs = Date.now() - new Date(birthdate).getTime();
@@ -300,9 +301,9 @@ export const superLikeUser = catchAsync(
       const mySubscription = await SubscriptionService.getMySubscription(fromUser);
       const plan = mySubscription ? (mySubscription.plan_type as Plan) : null;
 console.log("My Subscription:", mySubscription);
-      let superLikeLimit = 1;
-      if (plan === Plan.BIRDIE) superLikeLimit = 3;
-      if (plan === Plan.EAGLE) superLikeLimit = 10;
+      let superLikeLimit = 100;
+      if (plan === Plan.BIRDIE) superLikeLimit = 300;
+      if (plan === Plan.EAGLE) superLikeLimit = 1000;
       if (plan === Plan.ACE) superLikeLimit = Infinity;
 
       const now = new Date();
@@ -509,6 +510,7 @@ export const getUsersWhoLikedMe = catchAsync(
         images: user?.images,
         age: user?.birthdate ? calculateAge(user.birthdate) : null,
         status: swipe.status,
+        timestamp: swipe.createdAt,
         action: swipe.action,
         isSuperLike: swipe.action === "superlike",
       };
@@ -540,6 +542,7 @@ export const getUsersILiked = catchAsync(
         images: user?.images,
         age: user?.birthdate ? calculateAge(user.birthdate) : null,
         status: swipe.status,
+        timestamp: swipe.createdAt,
         action: swipe.action,
         isSuperLike: swipe.action === "superlike",
       };

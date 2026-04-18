@@ -48,6 +48,7 @@ export interface IDailyClubhouseStats {
   likesGiven: number;
   strongReactionsGiven: number;
   commentsGiven: number;
+  reentryPoints: number;
 }
 
 export interface IBadgeProximityNotified {

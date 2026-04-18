@@ -125,7 +125,7 @@ const updateSubscriptionStatus = async (
   const subscription = await Subscription.findOneAndUpdate(
     { transactionId },
     { ...updateData, updatedAt: new Date() }, // Spread all fields from updateData
-    { new: true }
+    { returnDocument: 'after' }
   );
 
   if (!subscription) {
@@ -159,7 +159,7 @@ const cancelSubscription = async (userId: string) => {
       status: SubscriptionStatus.CANCELLED,
       auto_renew: false,
     },
-    { new: true }
+    { returnDocument: 'after' }
   );
 
   if (!subscription) {

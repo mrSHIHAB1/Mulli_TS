@@ -9,6 +9,7 @@ import User from "../user/user.model";
 import { userService } from "../user/user.service";
 import Subscription from "../subscription/subscription.model";
 import { SubscriptionStatus } from "../subscription/subscription.interface";
+import { getClubhouseProfile } from "../Clubhouse/clubhouse.points";
 
 interface ServiceResult<T = any> {
   success: boolean;
@@ -152,6 +153,24 @@ const getMe = async (authUser: any): Promise<any> => {
   const user = await User.findOne({ email });
   if (!user) {
     throw new Error("User not found");
+  }
+
+  // Fetch updated clubhouse profile data (includes status, badge, points, etc.)
+  try {
+    const clubhouseProfile = await getClubhouseProfile(user._id.toString());
+    // Merge clubhouse fields into user object
+    if (clubhouseProfile) {
+      user.badgePoints = clubhouseProfile.badgePoints;
+      user.clubhouseStatus = clubhouseProfile.clubhouseStatus;
+      user.clubhouseBadge = clubhouseProfile.clubhouseBadge;
+      user.badgeEarnedAt = clubhouseProfile.badgeEarnedAt;
+      user.lastClubhouseActivity = clubhouseProfile.lastClubhouseActivity;
+      user.clubhouseActiveSince = clubhouseProfile.clubhouseActiveSince;
+      user.dailyClubhouseStats = clubhouseProfile.dailyClubhouseStats;
+    }
+  } catch (error: any) {
+    console.error("Error fetching clubhouse profile:", error.message);
+    // Continue with regular user data if clubhouse profile fetch fails
   }
 
   // Fetch active subscription

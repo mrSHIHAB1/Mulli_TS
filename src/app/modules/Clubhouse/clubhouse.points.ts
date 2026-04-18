@@ -137,7 +137,7 @@ function applyBadgeAndStatus(user: any): void {
   const lastActivity: Date | null = user.lastClubhouseActivity
     ? new Date(user.lastClubhouseActivity)
     : null;
-
+console.log(lastActivity)
   if (!lastActivity) {
     user.clubhouseStatus = ClubhouseStatus.IN_CLUBHOUSE;
   } else {
@@ -291,7 +291,7 @@ async function addGivenPoints(
     const reentryPoints = ((stats.reentryPoints || 0) + actual);
     stats.reentryPoints = reentryPoints;
 
-    if (reentryPoints > REENTRY_POINTS_THRESHOLD) {
+    if (reentryPoints >= REENTRY_POINTS_THRESHOLD) {
    
       (user as any).clubhouseStatus = ClubhouseStatus.IN_CLUBHOUSE;
       (user as any).lastDecayAppliedAt = null; // reset grace period

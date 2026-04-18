@@ -380,8 +380,8 @@ const toggleIncognitoMode = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     statusCode: 200,
     success: true,
-    message: `Incognito mode ${result.isIncognito ? "enabled" : "disabled"}`,
-    data: result,
+    message: `${result.isIncognito ? "ENABLED" : "DISABLED"}`,
+    data: null,
   });
 });
 

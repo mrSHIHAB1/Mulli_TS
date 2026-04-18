@@ -187,7 +187,7 @@ export const createCommentService = async (
   const updatedPost = await Post.findByIdAndUpdate(
     postId,
     { $inc: { commentsCount: 1 } },
-    { new: true }
+    { returnDocument: 'after' }
   ).populate("author");
 
   if (!updatedPost) throw new Error("Post not found");
@@ -304,7 +304,7 @@ export const sendGiftService = async (
         gifts: { user: user.id, giftType, sentAt: new Date() },
       },
     },
-    { new: true }
+    { returnDocument: 'after' }
   )
     .populate("author", "firstName lastName profileImage skillLevel")
     .populate("reactions.user", "firstName lastName profileImage");
@@ -588,7 +588,8 @@ export const boostPostService = async (
   const post = await Post.findById(postId);
   if (!post) throw new Error("Post not found");
 
-  if (post.author.toString() !== userId) {
+  if (!post.author.equals(userId)){
+    console.log(`User ${userId} attempted to boost post ${postId} which they do not own this is author id ${post.author.toString()}`);
     throw new Error("You can only boost your own posts");
   }
 
@@ -603,6 +604,7 @@ export const boostPostService = async (
   const boostLimit = planConfig.clubhouseBoosts;
 
   if (boostLimit === 0) {
+    console.log("planConfig", planConfig);
     throw new Error("Your current plan does not include post boosts");
   }
 

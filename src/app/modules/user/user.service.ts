@@ -45,7 +45,7 @@ const createUser = async (data: any): Promise<any> => {
   const userData = await User.findOneAndUpdate(
     filter,
     { ...data, isProfileComplete: true },
-    { new: true }
+    { returnDocument: 'after' }
   );
 
   if (!userData) {
@@ -308,7 +308,7 @@ const updateUserProfileService = async (
   const updatedUser = await User.findByIdAndUpdate(
     new mongoose.Types.ObjectId(userId),
     { $set: updateData },
-    { new: true }
+    { returnDocument: 'after' }
   );
 
   if (!updatedUser) {
@@ -322,7 +322,7 @@ const updateUserStatus = async (userId: string, isOnline: boolean) => {
   return await User.findByIdAndUpdate(
     userId,
     { isOnline },
-    { new: true }
+   { returnDocument: 'after' }
   );
 };
 const deleteUserService = async (userId: string) => {
@@ -352,11 +352,11 @@ const activateBoost = async (userId: string) => {
 
   const plan = mySubscription.plan_type as Plan;
 
-  let boostLimit = 0;
+  let boostLimit = 100;
   if (plan === Plan.EAGLE) {
-    boostLimit = 2;
+    boostLimit = 200;
   } else if (plan === Plan.BIRDIE) {
-    boostLimit = 1;
+    boostLimit = 100;
   } else if (plan === Plan.ACE) {
     throw new Error("Ace members are already prioritized at the top of the feed");
   } else {
@@ -458,7 +458,7 @@ const updateProfileImagesService = async (
   const updated = await User.findByIdAndUpdate(
     userId,
     { profileImage: result.secure_url },
-    { new: true }
+    { returnDocument: 'after' }
   ).select("profileImage firstName lastName");
 
   return updated;

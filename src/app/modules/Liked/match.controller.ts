@@ -58,6 +58,7 @@ export const getMyMatches = catchAsync(async (req: Request, res: Response) => {
       images: otherUser?.images,
       location: otherUser?.location,
       age: otherUser?.birthdate ? calculateAge(otherUser.birthdate) : null,
+      timestamp: match.createdAt,
       status: "matched",
       matchType: match.matchType,
       isSuperLike: !!superLikeSwipe,

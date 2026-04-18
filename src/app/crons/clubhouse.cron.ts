@@ -223,6 +223,7 @@ let isRunning = false;
 export const startClubhouseDecayCron = (): void => {
   cron.schedule(
     "0 2 * * *",
+    // "* * * * *",
     async () => {
       if (isRunning) {
         console.warn("[ClubhouseCron] Previous run still in progress, skipping.");
