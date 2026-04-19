@@ -42,8 +42,6 @@ export const getDiscoveryUsers = catchAsync(async (req: Request, res: Response) 
   };
 
   const users = await discoveryService(authUser, filters);
-
-console.log("Discovery filters:", authUser,filters);
   sendResponse(res, {
     statusCode: 200,
     success: true,

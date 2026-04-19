@@ -5,6 +5,7 @@ export interface ISwipeDocument extends Document {
   toUser: mongoose.Types.ObjectId;
   action: "like" | "superlike" | "pass" | "gift";
   status: "pending" | "matched" | "ignored";
+  message?: string;
   expiresAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -31,6 +32,9 @@ const SwipeSchema: Schema<ISwipeDocument> = new Schema(
       type: String,
       enum: ["pending", "matched", "ignored"],
       default: "pending",
+    },
+    message: {
+      type: String,
     },
     expiresAt: {
       type: Date,

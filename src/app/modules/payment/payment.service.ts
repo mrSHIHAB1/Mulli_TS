@@ -11,7 +11,7 @@ import {
   PRODUCT_PLAN_MAP,
   VALID_PRODUCT_IDS,
 } from "../../config/iap.config";
-import { SubscriptionStatus } from "../subscription/subscription.interface";
+import { Plan, SubscriptionStatus } from "../subscription/subscription.interface";
 import Subscription from "../subscription/subscription.model";
 import AppError from "../../errorHelpers/AppError";
 import { invalidateUserSubscriptionCache } from "../../helpers/redisCache.helper";
@@ -21,8 +21,42 @@ import {
   PaymentTransactionStatus,
   PaymentTransactionType,
 } from "./payment.interface";
+//this is updated subscripition code
 import { SUBSCRIPTION_PLANS } from "../../config/subscriptionPlans";
 
+import User from "../user/user.model";
+
+const PLAN_TIERS: Record<string, number> = {
+  [Plan.FREE]: 0,
+  [Plan.BIRDIE]: 1,
+  [Plan.ACE]: 1,
+  [Plan.EAGLE]: 1,
+};
+
+const handlePlanUpgradeUsage = async (userId: string, oldPlan: string, newPlan: string) => {
+  const oldTier = PLAN_TIERS[oldPlan] || 0;
+  const newTier = PLAN_TIERS[newPlan] || 0;
+
+
+  if (newTier > oldTier) {
+    if (oldTier === 0) {
+      // Free to Paid: Reset usage
+      await User.findByIdAndUpdate(userId, {
+        $set: {
+          superLikesThisMonth: 0,
+          lastSuperLikeResetDate: new Date(),
+          boostsUsedThisMonth: 0,
+          lastBoostResetDate: new Date()
+        }
+      });
+      console.log(`User ${userId} upgraded from FREE to ${newPlan}. Reseting super like and boost usage.`);
+    } else {
+      // Lower Paid to Higher Paid: Keep usage
+      console.log(`User ${userId} upgraded from ${oldPlan} to ${newPlan}. Preserving super like and boost usage.`);
+    }
+  }
+};
+//this is updated subscripition code
 // Duration mapping for subscription plans
 const PRODUCT_MONTHS_MAP: Record<string, number> = {
   mulli_eagle_1m: 1,
@@ -124,6 +158,10 @@ const verifyPurchase = async (payload: {
 
   // 8. Update or create subscription
   if (existingSub) {
+    //this is updated subscripition code
+    // Capture old plan before updating
+    const oldPlan = existingSub.plan_type;
+    //this is updated subscripition code
     // Update the existing subscription if found
     existingSub.plan_type = resolvedPlan;
     existingSub.productId = transaction.productId;
@@ -134,6 +172,7 @@ const verifyPurchase = async (payload: {
     existingSub.metadata = transaction;
 
     await existingSub.save();
+    await handlePlanUpgradeUsage(userId, oldPlan, resolvedPlan);
     await invalidateUserSubscriptionCache(userId);
     return existingSub;
   }
@@ -231,7 +270,7 @@ const handleAppleWebhook = async (req: Request) => {
     auto_renew: autoRenew,
     metadata: transaction,
   };
-
+//this is updated subscripition code
   if (eventType === "EXPIRED") {
     updateData.status = SubscriptionStatus.EXPIRED;
     if (transaction.expiresDate) {
@@ -260,8 +299,16 @@ const handleAppleWebhook = async (req: Request) => {
 
   if (Object.keys(updateData).length === 0) {
     return { message: "No action needed", eventType };
-  }
+  }//this is updated subscripition code
 
+  // Fetch the subscription BEFORE updating to capture old plan
+  const existingSubForWebhook = await Subscription.findOne({
+    $or: [
+      { transactionId: transactionId },
+      { originalTransactionId: originalTransactionId },
+    ],
+  });
+//this is updated subscripition code
   const updated = await Subscription.findOneAndUpdate(
     {
       $or: [
@@ -273,7 +320,18 @@ const handleAppleWebhook = async (req: Request) => {
     { returnDocument: "after" }
   );
 
-  if (updated) {
+  if (updated) {//this is updated subscripition code
+    // Handle plan upgrade if plan changed during renewal
+    if (eventType === "DID_RENEW" && existingSubForWebhook && updateData.plan_type) {
+      const oldPlan = existingSubForWebhook.plan_type;
+      const newPlan = updateData.plan_type;
+      if (oldPlan !== newPlan) {
+        await handlePlanUpgradeUsage(updated.userId.toString(), oldPlan, newPlan);
+      }
+    }
+
+    
+    //this is updated subscripition code
     await Subscription.findByIdAndUpdate(updated._id, { metadata: transaction });
     await invalidateUserSubscriptionCache(updated.userId.toString());
 

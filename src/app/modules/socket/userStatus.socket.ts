@@ -14,9 +14,6 @@ export const userStatusSocket = (io: Server) => {
       // Mark user as online in database
       await userService.updateUserStatus(userId, true);
       
-      // Notify others or log
-      console.log(`User ${userId} is online`);
-      
       // Broadcast to others if needed
       io.emit("user-status-changed", { userId, isOnline: true });
     });
@@ -27,8 +24,6 @@ export const userStatusSocket = (io: Server) => {
       if (userId) {
         // Mark user as offline in database
         await userService.updateUserStatus(userId, false);
-        
-        console.log(`User ${userId} is offline`);
         
         // Broadcast to others if needed
         io.emit("user-status-changed", { userId, isOnline: false });

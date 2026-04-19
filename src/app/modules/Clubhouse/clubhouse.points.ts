@@ -137,7 +137,6 @@ function applyBadgeAndStatus(user: any): void {
   const lastActivity: Date | null = user.lastClubhouseActivity
     ? new Date(user.lastClubhouseActivity)
     : null;
-console.log(lastActivity)
   if (!lastActivity) {
     user.clubhouseStatus = ClubhouseStatus.IN_CLUBHOUSE;
   } else {

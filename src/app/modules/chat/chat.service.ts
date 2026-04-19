@@ -61,7 +61,6 @@ const sendMessageService = async (
 
 const getConversationsService = async (user: JwtPayload) => {
   const userId = new Types.ObjectId(user.userId || user.id);
-  console.log("User ID in getConversationsService:", userId);
   const conversations = await Message.aggregate([
     {
       $match: {

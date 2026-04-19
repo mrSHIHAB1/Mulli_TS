@@ -10,6 +10,8 @@ import { NotificationService } from "../notification/notification.service";
 import { SubscriptionService } from "../subscription/subscription.service";
 import { Plan } from "../subscription/subscription.interface";
 import Subscription from "../subscription/subscription.model";
+import { chatService } from "../chat/chat.service";
+import { Types } from "mongoose";
 import { time } from "node:console";
 
 const calculateAge = (birthdate: Date): number => {
@@ -132,17 +134,17 @@ export const likeUser = catchAsync(
       // Subscription Check: Unlimited likes for ACE or EAGLE
       // -------------------------------------------------------------
       const mySubscription = await SubscriptionService.getMySubscription(fromUser);
-      
+
       if (!mySubscription || ![Plan.ACE, Plan.EAGLE].includes(mySubscription.plan_type as Plan)) {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        
+
         const likesToday = await Swipe.countDocuments({
           fromUser,
           action: "like",
           createdAt: { $gte: today }
         });
-        
+
         const DAILY_LIKE_LIMIT = 10;
         if (likesToday >= DAILY_LIKE_LIMIT) {
           return sendResponse(res, {
@@ -258,9 +260,8 @@ export const likeUser = catchAsync(
       }
       // End Automatic Matching Check
 
-      const senderName = currentUser
-        ? `${currentUser.firstName || ""} ${currentUser.lastName || ""}`.trim()
-        : "Someone";
+      const senderName = currentUser ? `${currentUser.firstName || ""} ${currentUser.lastName || ""}`.trim() : "Someone";
+
       await NotificationService.notifyNewLike(toUser as string, fromUser, senderName);
 
       sendResponse(res, {
@@ -300,7 +301,7 @@ export const superLikeUser = catchAsync(
 
       const mySubscription = await SubscriptionService.getMySubscription(fromUser);
       const plan = mySubscription ? (mySubscription.plan_type as Plan) : null;
-console.log("My Subscription:", mySubscription);
+      console.log("My Subscription:", mySubscription);
       let superLikeLimit = 100;
       if (plan === Plan.BIRDIE) superLikeLimit = 300;
       if (plan === Plan.EAGLE) superLikeLimit = 1000;
@@ -308,18 +309,18 @@ console.log("My Subscription:", mySubscription);
 
       const now = new Date();
       const lastReset = user.lastSuperLikeResetDate || new Date(0);
-      
+
       const msIn7Days = 7 * 24 * 60 * 60 * 1000;
       const isNewBillingCycle = (now.getTime() - lastReset.getTime()) >= msIn7Days;
 
       if (isNewBillingCycle) {
         user.superLikesThisMonth = 0;
-        console.log("New billing cycle detected. Resetting super like count.",user.superLikesThisMonth);
+        console.log("New billing cycle detected. Resetting super like count.", user.superLikesThisMonth);
         user.lastSuperLikeResetDate = now;
       }
 
       if (plan !== Plan.ACE && (user.superLikesThisMonth || 0) >= superLikeLimit) {
-        console.log("superlike limit", superLikeLimit,"user.superLikesThisMonth",user.superLikesThisMonth);
+        console.log("superlike limit", superLikeLimit, "user.superLikesThisMonth", user.superLikesThisMonth);
         return sendResponse(res, {
           statusCode: 403,
           success: false,
@@ -339,16 +340,37 @@ console.log("My Subscription:", mySubscription);
         });
       }
 
+      const { message } = req.body;
+
       await Swipe.create({
         fromUser,
         toUser,
         action: "superlike",
         status: "pending",
+        message,
       });
 
       if (plan !== Plan.ACE) {
         user.superLikesThisMonth = (user.superLikesThisMonth || 0) + 1;
         await user.save();
+      }
+
+      const targetUser = await User.findById(toUser);
+      if (!targetUser) {
+        return sendResponse(res, { statusCode: 404, success: false, message: "Target user not found", data: null });
+      }
+
+      const senderName = user
+        ? `${user.firstName || ""} ${user.lastName || ""}`.trim()
+        : "Someone";
+
+      if (message) {
+        await chatService.sendMessageService(
+          (req as any).user,
+          toUser as string,
+          { message: { text: message } }
+        );
+        
       }
 
       const reverseLike = await Swipe.findOne({
@@ -396,8 +418,6 @@ console.log("My Subscription:", mySubscription);
       }
 
       // Start Automatic Matching Check
-      const targetUser = await User.findById(toUser);
-
       if (user && targetUser) {
         const isCompatible = checkCompatibility(user, targetUser);
 
@@ -436,10 +456,9 @@ console.log("My Subscription:", mySubscription);
       }
       // End Automatic Matching Check
 
-      const senderName = user
-        ? `${user.firstName || ""} ${user.lastName || ""}`.trim()
-        : "Someone";
-      await NotificationService.notifyNewLike(toUser as string, fromUser, senderName);
+
+
+      await NotificationService.notifyNewLike(toUser as string, fromUser, senderName, message, true);
 
       sendResponse(res, {
         statusCode: 200,
@@ -476,16 +495,16 @@ console.log("My Subscription:", mySubscription);
 // });
 
 export const getUsersWhoLikedMe = catchAsync(
-  
+
   async (req: Request, res: Response) => {
     const myId = (req as any).user?.id;
-// ----------------------------------------------------------
+    // ----------------------------------------------------------
     // Check subscription: MUST have Mulli Plus or Mulli X
     // ----------------------------------------------------------
     const mySubscription = await SubscriptionService.getMySubscription(myId);
     console.log("My Subscription:", mySubscription);
     if (
-      !mySubscription || 
+      !mySubscription ||
       ![Plan.ACE, Plan.EAGLE].includes(mySubscription.plan_type as Plan)
     ) {
       return sendResponse(res, {
@@ -505,7 +524,7 @@ export const getUsersWhoLikedMe = catchAsync(
       const user = swipe.fromUser;
       return {
         _id: user?._id,
-        firstName: user?.firstName, 
+        firstName: user?.firstName,
         lastName: user?.lastName,
         images: user?.images,
         age: user?.birthdate ? calculateAge(user.birthdate) : null,

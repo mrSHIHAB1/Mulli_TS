@@ -6,6 +6,7 @@ const toStringMap = (data?: Record<string, any>) => {
   if (!data) return out;
   for (const k of Object.keys(data)) {
     const v = data[k];
+    if (v === undefined || v === null) continue;
     out[k] = typeof v === "string" ? v : JSON.stringify(v);
   }
   return out;

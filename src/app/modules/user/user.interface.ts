@@ -25,7 +25,11 @@ export interface IAuthProvider {
   provider: AuthProviderType;
   providerID: string;
 }
-
+export enum Line{
+ONTHECOURSE = "ONTHECOURSE",
+OFFTHECOURSE = "OFFTHECOURSE",
+  DATING = "DATING",
+}
 // This should reflect the fields we actually use in services, auth, and passport.
 // It's intentionally permissive (many fields optional) to avoid blocking on strict typing.
 export enum ClubhouseStatus {
@@ -134,6 +138,10 @@ export interface IUser {
   lastDecayAppliedAt?: Date | null;
   lastInactivityNotificationAt?: Date | null;
   badgeProximityNotified?: IBadgeProximityNotified;
+  line?: {
+    type: Line;
+    prompts: string[];
+  };
 
   // Boost fields
   boostedUntil?: Date | null;

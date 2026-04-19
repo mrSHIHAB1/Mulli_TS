@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
-import { AuthProviderType, ClubhouseBadge, ClubhouseStatus, IsActive, IUser, Role } from "./user.interface";
+import { AuthProviderType, ClubhouseBadge, ClubhouseStatus, IsActive, IUser, Line, Role } from "./user.interface";
 
 
 
@@ -29,6 +29,17 @@ const UserSchema: Schema<IUser> = new Schema(
     isVerified: { type: Boolean, default: false },
     isblocked: { type: Boolean, default: false },
     isOnline: { type: Boolean, default: false },
+    line: {
+      type: {
+        type: String,
+        enum: Object.values(Line),
+        
+      },
+      prompts: {
+        type: [String],
+        default: [],
+      },
+    },
 
     // Password & auth providers (for local/google/apple login)
     password: { type: String, select: false },
@@ -79,7 +90,7 @@ const UserSchema: Schema<IUser> = new Schema(
     height: { type: Number, default: 0 },
     fcmTokens: [{ type: String }],
     hasKids: { type: Boolean, default: false },
-    wantsKids: { type: String, default: false },
+    wantsKids: { type: String, default: "false" },
     drinking: { type: String },
     smoking: { type: String },
     images: [String],

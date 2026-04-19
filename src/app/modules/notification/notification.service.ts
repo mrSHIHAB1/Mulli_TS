@@ -52,7 +52,7 @@ const pushToUserIds = async (
   const tokens = users.flatMap((u: any) => u.fcmTokens || []).filter(Boolean);
 
   if (!tokens.length) return { successCount: 0, failureCount: 0 };
-console.log( tokens)
+  console.log(tokens)
   //  important: data must be string or firebase will fail
   return sendPushToTokens(tokens, title, body, data);
 };
@@ -74,7 +74,9 @@ const notifyChatMessage = async (
   const receiverObjectId = new Types.ObjectId(receiverId);
 
   const title = "New message received";
-  const body = `${sender?.full_name || "Someone"} sent you a message`;
+  const senderName = sender?.full_name || 
+                     (sender?.firstName && sender?.lastName ? `${sender.firstName} ${sender.lastName}` : (sender?.firstName || sender?.name || "Someone"));
+  const body = `${senderName} sent you a message`;
 
   const data: INotificationData = {
     senderId,
@@ -121,8 +123,8 @@ const getMyNotifications = async (
   const [data, total] = await Promise.all([
     Notification.find({ user: userObjectId })
       .sort({ createdAt: -1 }),
-      // .skip(skip)
-      // .limit(limit),
+    // .skip(skip)
+    // .limit(limit),
     Notification.countDocuments({ user: userObjectId }),
   ]);
 
@@ -228,7 +230,9 @@ const getAllNotifications = async ({
 const notifyNewLike = async (
   receiverId: string,
   senderId: string,
-  senderName: string
+  senderName: string,
+  message?: string,
+  isSuperLike?: boolean
 ) => {
   // Prevent self-notification
   if (String(receiverId) === String(senderId)) {
@@ -237,12 +241,19 @@ const notifyNewLike = async (
 
   const receiverObjectId = new Types.ObjectId(receiverId);
 
-  const title = "New Like!";
-  const body = `${senderName || "Someone"} liked your profile.`;
+  const title = isSuperLike ? "New Super Like! 🌟" : "New Like!";
+  let body = `${senderName || "Someone"} liked your profile.`;
+  if (isSuperLike) {
+    body = message 
+      ? `${senderName || "Someone"} sent you a super like: "${message}"`
+      : `${senderName || "Someone"} sent you a super like!`;
+  }
 
   const data: INotificationData = {
     senderId,
     receiverId,
+    message,
+    isSuperLike: isSuperLike ? "true" : "false"
   };
 
   const saved = await createInApp(
