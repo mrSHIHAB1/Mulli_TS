@@ -576,3 +576,90 @@ export const getUsersILiked = catchAsync(
   }
 );
 
+export const rewindSwipe = catchAsync(async (req: Request, res: Response) => {
+  const fromUser = (req as any).user?.id;
+  const twentyMinutesAgo = new Date(Date.now() - 20 * 60 * 1000);
+
+  // Find the last swipe (like or pass) within the last 20 minutes
+  const lastSwipe = await Swipe.findOne({
+    fromUser,
+    action: { $in: ["like", "pass"] },
+    createdAt: { $gte: twentyMinutesAgo },
+  }).sort({ createdAt: -1 });
+
+  if (!lastSwipe) {
+    return sendResponse(res, {
+      statusCode: 404,
+      success: false,
+      message: "No recent like or pass action found to rewind (limit 20 minutes).",
+      data: null,
+    });
+  }
+
+  // If it was a like, check if it resulted in a match and handle that
+  if (lastSwipe.status === "matched") {
+    const toUser = lastSwipe.toUser;
+    const [u1, u2] = [fromUser, toUser].sort();
+    
+    // Remove the match record
+    await Match.findOneAndDelete({ user1: u1, user2: u2 });
+
+    // Also reset the status of the other user's swipe if it exists
+    await Swipe.updateOne(
+      { fromUser: toUser, toUser: fromUser, status: "matched" },
+      { status: "pending" }
+    );
+  }
+
+  // Find the target user details to return
+  const user = await User.findById(lastSwipe.toUser);
+  if (!user) {
+    // If the user was deleted/not found, we can't show details, but we can still delete the swipe
+    await Swipe.findByIdAndDelete(lastSwipe._id);
+    return sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Action rewound successfully. User profile no longer exists.",
+      data: null,
+    });
+  }
+
+  // Delete the swipe record
+  await Swipe.findByIdAndDelete(lastSwipe._id);
+
+  // Get current user for distance calculation if needed, or just return basic details
+  const me = await User.findById(fromUser);
+  
+  const getDistanceKm = (u1: any, u2: any) => {
+    if (!u1.location?.coordinates || !u2.location?.coordinates) return 0;
+    const [lon1, lat1] = u1.location.coordinates;
+    const [lon2, lat2] = u2.location.coordinates;
+    return parseFloat(getDistance(lat1, lon1, lat2, lon2).toFixed(1));
+  };
+
+  const transformedUser = {
+    id: user._id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    age: user.birthdate ? calculateAge(user.birthdate) : null,
+    distanceKm: me ? getDistanceKm(me, user) : 0,
+    profileImage: user.profileImage,
+    images: user.images,
+    skillLevel: user.skillLevel,
+    hopingToFind: user.hopingToFind,
+    gender: user.gender,
+    playstyle: user.playstyle,
+    height: user.height,
+    religion: user.religion,
+    handicaprange: user.handicaprange,
+    tcp: "N/A",
+  };
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Action rewound successfully.",
+    data: transformedUser,
+  });
+});
+

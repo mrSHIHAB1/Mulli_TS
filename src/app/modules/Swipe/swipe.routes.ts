@@ -7,6 +7,7 @@ import {
   likeUser,
   superLikeUser,
   passUser,
+  rewindSwipe,
 } from "./swipe.controllers";
 import { checkAuth } from "../../middlewares/checkAuth";
 import { Role } from "../user/user.interface";
@@ -19,6 +20,7 @@ router.post("/like/:id", checkAuth(...Object.values(Role)), likeUser);
 router.post("/super-like/:id", checkAuth(...Object.values(Role)), superLikeUser);
 router.get("/liked-by-me", checkAuth(...Object.values(Role)), getUsersILiked);
 router.get("/liked-me", checkAuth(...Object.values(Role)), getUsersWhoLikedMe);
+router.post("/rewind", checkAuth(...Object.values(Role)), rewindSwipe);
 
 // router.post("/gift", checkAuth(...Object.values(Role)), giftUser);
 

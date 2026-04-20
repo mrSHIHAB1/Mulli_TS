@@ -41,11 +41,20 @@ export const getDiscoveryUsers = catchAsync(async (req: Request, res: Response) 
 
   };
 
-  const users = await discoveryService(authUser, filters);
+  // Pagination
+  const page = req.query.page ? Number(req.query.page) : 1;
+
+  const result = await discoveryService(authUser, filters, page);
   sendResponse(res, {
     statusCode: 200,
     success: true,
     message: "Discovery users loaded",
-    data: users,
+    data: result.users,
+    meta: {
+      currentPage: result.pagination.currentPage,
+      totalPages: result.pagination.totalPages,
+      perPage: result.pagination.perPage,
+      total: result.pagination.total
+    }
   });
 });

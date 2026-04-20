@@ -435,6 +435,60 @@ export const appleLoginController = async (req: Request, res: Response) => {
     });
   }
 };
+const getUserById = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.params;
+  
+  if (!userId) {
+    return sendResponse(res, {
+      statusCode: 400,
+      success: false,
+      message: "User ID is required",
+      data: null,
+    });
+  }
+
+  const user = await userService.getUserById(userId as string);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "User retrieved successfully",
+    data: user,
+  });
+});
+
+const getUserProfile = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.params;
+  const currentUserId =  (req as any).user?.id ;
+
+  if (!userId) {
+    return sendResponse(res, {
+      statusCode: 400,
+      success: false,
+      message: "User ID is required",
+      data: null,
+    });
+  }
+
+  if (!currentUserId) {
+    return sendResponse(res, {
+      statusCode: 401,
+      success: false,
+      message: "Unauthorized - Current user not found",
+      data: null,
+    });
+  }
+
+  const profileData = await userService.getUserProfileWithRelationship(currentUserId as string, userId as string);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "User profile retrieved successfully",
+    data: profileData,
+  });
+});
+
 export const userControllers = {
   createUser,
   sendEmailOtp,
@@ -449,6 +503,8 @@ export const userControllers = {
   getAllUsers,
   changeLocation,
   appleLoginController,
-  toggleIncognitoMode
+  toggleIncognitoMode,
+  getUserById,
+  getUserProfile
 };
 

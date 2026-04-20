@@ -12,6 +12,9 @@ import { fileUploader } from "../../helpers/fileUpload";
 import { SubscriptionService } from "../subscription/subscription.service";
 import { Plan } from "../subscription/subscription.interface";
 import { verifyAppleToken } from "../../utils/appleVerify";
+import { get } from "node:http";
+import { Swipe } from "../Swipe/swipe.model";
+import { Match } from "../Liked/match.model";
 
 
 const OTP_EXPIRE = 5 * 60; // 3 minutes
@@ -545,6 +548,49 @@ export const appleLogin = async (identityToken: string) => {
   };
 };
 
+const getUserById = async (userId: string): Promise<any> => {
+  const user = await User.findById(userId)
+  if (!user) throw new Error("User not found");
+  return user;
+}
+
+const getUserProfileWithRelationship = async (currentUserId: string, targetUserId: string): Promise<any> => {
+  // Get target user info
+  const targetUser = await User.findById(targetUserId);
+  if (!targetUser) throw new Error("User not found");
+
+  // Check if there's a match
+  const match = await Match.findOne({
+    $or: [
+      { user1: new mongoose.Types.ObjectId(currentUserId), user2: new mongoose.Types.ObjectId(targetUserId) },
+      { user1: new mongoose.Types.ObjectId(targetUserId), user2: new mongoose.Types.ObjectId(currentUserId) }
+    ]
+  });
+
+  // Check swipe history - did current user like target user
+  const currentUserLike = await Swipe.findOne({
+    fromUser: new mongoose.Types.ObjectId(currentUserId),
+    toUser: new mongoose.Types.ObjectId(targetUserId)
+  });
+
+  // Check if target user liked current user
+  const targetUserLike = await Swipe.findOne({
+    fromUser: new mongoose.Types.ObjectId(targetUserId),
+    toUser: new mongoose.Types.ObjectId(currentUserId)
+  });
+
+  // Check if current user blocked target user
+  // const isBlocked = targetUser.blockedBy?.includes(new mongoose.Types.ObjectId(currentUserId));
+
+  return {
+    user: targetUser.toObject(),
+    relationship: {
+      // isBlocked: !!isBlocked,
+      Status: match ? "MATCHED" : (currentUserLike || targetUserLike ? "PENDING" : "NONE")
+    }
+  };
+}
+
 export const userService = {
   createUser,
   createEmailOtp,
@@ -565,5 +611,7 @@ export const userService = {
   getAllUsers,
   changeLocation,
   appleLogin,
-  toggleIncognitoMode
+  toggleIncognitoMode,
+  getUserById,
+  getUserProfileWithRelationship,
 }

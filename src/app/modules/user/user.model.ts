@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
-import { AuthProviderType, ClubhouseBadge, ClubhouseStatus, IsActive, IUser, Line, Role } from "./user.interface";
+import { AuthProviderType, CannabisUsage, ClubhouseBadge, ClubhouseStatus, CommunicationStyle, EducationPlan, Energy, IsActive, IUser, Line, LoveLanguage, Mentality, moreAboutGender, Pace, PetType, PlayPreference, PlayStyle, Politics, Role, SocialStyle, Workout, Zodiac } from "./user.interface";
 
 
 
@@ -95,6 +95,8 @@ const UserSchema: Schema<IUser> = new Schema(
     smoking: { type: String },
     images: [String],
     prompt: [{ type: String }],
+    goodGolfBuddyQualities: [{ type: String }],
+    preferredGolfTimes: { type: String },
     playstyle: { type: String, enum: ["Golf_Buddy", "Golf_Date"] },
     location: {
       type: { type: String, default: "Point" },
@@ -132,6 +134,7 @@ provider: { type: String, enum: ["apple", "google", "phone", "email"] },
       commentsGiven: { type: Number, default: 0 },
     },
     lastInactivityNotificationAt: { type: Date, default: null },
+    
     badgeProximityNotified: {
       risingstar: { type: Boolean, default: false },
       locallegend: { type: Boolean, default: false },
@@ -140,7 +143,41 @@ provider: { type: String, enum: ["apple", "google", "phone", "email"] },
     bio: { type: String },
     languages: [{ type: String }],
     blockedUsers: [{ type: Schema.Types.ObjectId, ref: 'User' }],
-
+vibe: {
+  playStyles: {
+    type: String,
+    enum: Object.values(PlayStyle),
+    
+  },
+  pace: {
+    type: String,
+    enum: Object.values(Pace),
+   
+  },
+  courseVibes: {
+    type: String,
+    enum: Object.values(Energy),
+    
+  },
+},
+play: {
+  preferences: {
+    type: String,
+    enum: Object.values(PlayPreference),
+   
+  },
+  mentality: {
+    type: String,
+    enum: Object.values(Mentality),
+    
+  },
+  socialStyle: {
+    type: String,
+    enum: Object.values(SocialStyle),
+    
+  },
+},
+preferredDistance: { type: Number, default: 100 }, 
     // Boost fields
     boostedUntil: { type: Date, default: null },
     boostsUsedThisMonth: { type: Number, default: 0 },
@@ -159,6 +196,51 @@ provider: { type: String, enum: ["apple", "google", "phone", "email"] },
     lastSuperLikeResetDate: { type: Date, default: null },
 
     isIncognito: { type: Boolean, default: false },
+
+
+    //newly added fields
+  moreAboutGender: {type: String,enum: Object.values(moreAboutGender ),},
+  politics: {
+  type: String,
+  enum: Object.values(Politics),
+},
+
+zodiac: {
+  type: String,
+  enum: Object.values(Zodiac),
+},
+
+educationPlan: {
+  type: String,
+  enum: Object.values(EducationPlan
+  ),
+},
+
+communicationStyle: {
+  type: String,
+  enum: Object.values(CommunicationStyle),
+},
+
+loveLanguage: {
+  type: String,
+  enum: Object.values(LoveLanguage),
+},
+
+cannabis: {
+  type: String,
+  enum: Object.values(CannabisUsage),
+},
+
+workout: {
+  type: String,
+  enum: Object.values(Workout),
+},
+petType: {
+  type: String,
+  enum: Object.values(PetType),}
+
+
+    
   },
 
   { timestamps: true }

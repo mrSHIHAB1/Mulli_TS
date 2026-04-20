@@ -1,5 +1,6 @@
 
 import User from "../user/user.model";
+import Swipe from "../Swipe/swipe.model";
 import { calculateAge } from "../../utils/calculateAge";
 import { SubscriptionService } from "../subscription/subscription.service";
 import { Plan } from "../subscription/subscription.interface";
@@ -31,7 +32,8 @@ interface Filters {
 
 export const discoveryService = async (
   authUser: any,
-  filters: Filters = {}
+  filters: Filters = {},
+  page: number = 1
 ) => {
   if (!authUser?.id) throw new Error("Unauthorized");
 
@@ -39,7 +41,7 @@ export const discoveryService = async (
   const me = await User.findById(authUser.id);
   if (!me) throw new Error("User not found");
 
-  if (!me.location?.coordinates?.length) return [];
+  if (!me.location?.coordinates?.length) return { users: [], pagination: { total: 0, currentPage: 1, perPage: 20, totalPages: 0 } };
 
   const today = new Date();
 
@@ -61,9 +63,16 @@ export const discoveryService = async (
     }
   }
 
+  // Get swiped user IDs to exclude them from the feed
+  const swipedUserIds = await Swipe.find({ fromUser: authUser.id }).distinct("toUser");
+  
+  // Combine swiped IDs and blocked IDs for exclusion
+  const excludedIds = [...swipedUserIds, ...(me.blockedUsers || [])];
+
   //  Base Query
   const query: any = {
-    _id: { $ne: me._id },
+    _id: { $ne: me._id, $nin: excludedIds },
+    blockedUsers: { $ne: me._id }, // Don't show users who have blocked me
     isProfileComplete: true,
     isDeleted: false,
     isblocked: false,
@@ -159,7 +168,10 @@ export const discoveryService = async (
   }
 
   // Aggregation Pipeline
-  const pipeline: any[] = [
+  const perPage = 20;
+  const skip = (page - 1) * perPage;
+
+  const basePipeline: any[] = [
     { $geoNear: geoNear },
     { $match: query },
     {
@@ -221,23 +233,40 @@ export const discoveryService = async (
     },
     {
       $sort: { subscriptionRank: -1, distanceKm: 1 }
-    },
-    { $limit: 50 },
-    {
-      $project: {
-        password: 0,
-        email: 0,
-        phone: 0,
-        auth_providers: 0,
-        __v: 0,
-        createdAt: 0,
-        updatedAt: 0,
-        activeSubscription: 0,
-      },
-    },
+    }
   ];
 
-  const users = await User.aggregate(pipeline);
+  // Faceted aggregation for count and paginated results
+  const pipeline: any[] = [
+    ...basePipeline,
+    {
+      $facet: {
+        metadata: [
+          { $count: "total" }
+        ],
+        data: [
+          { $skip: skip },
+          { $limit: perPage },
+          {
+            $project: {
+              password: 0,
+              email: 0,
+              phone: 0,
+              auth_providers: 0,
+              __v: 0,
+              createdAt: 0,
+              updatedAt: 0,
+              activeSubscription: 0,
+            },
+          },
+        ]
+      }
+    }
+  ];
+
+  const result = await User.aggregate(pipeline);
+  const total = result[0]?.metadata[0]?.total || 0;
+  const users = result[0]?.data || [];
 
   // Transform Response
   const transformed = users.map((u: any) => ({
@@ -260,5 +289,13 @@ export const discoveryService = async (
     subscriptionType: u.subscriptionPlan || "NONE"
   }));
 
-  return transformed;
+  return {
+    users: transformed,
+    pagination: {
+      total,
+      currentPage: page,
+      perPage,
+      totalPages: Math.ceil(total / perPage)
+    }
+  };
 };

@@ -35,6 +35,8 @@ router.patch("/profile/incognito", checkAuth(...Object.values(Role)), userContro
 router.patch("/profile/location", checkAuth(...Object.values(Role)), userControllers.changeLocation);
 router.delete("/delete-account",checkAuth(...Object.values(Role)), userControllers.deleteAccount);
 router.get("/all", checkAuth(...Object.values(Role)), userControllers.getAllUsers);
+router.get("/userprofile/:userId", checkAuth(...Object.values(Role)), userControllers.getUserProfile);
+router.get("/:userId", checkAuth(...Object.values(Role)), userControllers.getUserById);
 
 export const userRoutes = router;
 
