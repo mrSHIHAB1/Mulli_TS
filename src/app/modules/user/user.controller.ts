@@ -279,6 +279,7 @@ export const getBlockedUsers = catchAsync(async (req: Request, res: Response) =>
 export const updateUserProfile = catchAsync(
   async (req: Request, res: Response) => {
     const currentUser: any = (req as any).user;
+    console.log("Current user in updateUserProfile:", currentUser);
     const files = req.files as Express.Multer.File[] | undefined;
     let bodyData: any = {};
 
@@ -289,7 +290,7 @@ export const updateUserProfile = catchAsync(
     }
 
     const updatedUser = await userService.updateUserProfileService(
-      currentUser._id,
+      currentUser.id,
       bodyData,
       files
     );

@@ -28,6 +28,7 @@ interface Filters {
   interests?: string[];
   openTo?: string;
   languages?: string[];
+  hopingToFind?: string;
 }
 
 export const discoveryService = async (
@@ -117,6 +118,7 @@ export const discoveryService = async (
     filters.politics !== undefined ||
     filters.religion !== undefined ||
     filters.openTo !== undefined ||
+    filters.hopingToFind !== undefined || 
     (filters.interests && filters.interests.length > 0) ||
     (filters.languages && filters.languages.length > 0);
 
@@ -156,6 +158,7 @@ export const discoveryService = async (
     if (filters.politics) query.politics = filters.politics;
     if (filters.religion) query.religion = filters.religion;
     if (filters.openTo) query.openTo = filters.openTo;
+    if (filters.hopingToFind) query.hopingToFind = filters.hopingToFind;
 
     // Array Match
     if (filters.interests?.length) {

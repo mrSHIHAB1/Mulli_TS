@@ -472,45 +472,25 @@ export const superLikeUser = catchAsync(
   }
 );
 
-// export const giftUser = catchAsync(async (req: Request, res: Response) => {
-//   const fromUser = (req as any).user?.id;
-//   const { toUser, coins } = req.body as { toUser: string; coins: number };
 
-//   await User.findByIdAndUpdate(fromUser, {
-//     $inc: { coins: -coins },
-//   });
-
-//   await Swipe.create({
-//     fromUser,
-//     toUser,
-//     action: "gift",
-//   });
-
-//   sendResponse(res, {
-//     statusCode: 200,
-//     success: true,
-//     message: "Gift sent",
-//     data: null,
-//   });
-// });
 
 export const getUsersWhoLikedMe = catchAsync(
 
   async (req: Request, res: Response) => {
     const myId = (req as any).user?.id;
     // ----------------------------------------------------------
-    // Check subscription: MUST have Mulli Plus or Mulli X
+    // Check subscription: MUST have any subscription to see who liked you, and must have Birdie,Eagle or Ace to see the list instead of just the count
     // ----------------------------------------------------------
     const mySubscription = await SubscriptionService.getMySubscription(myId);
     console.log("My Subscription:", mySubscription);
     if (
       !mySubscription ||
-      ![Plan.ACE, Plan.EAGLE].includes(mySubscription.plan_type as Plan)
+      ![Plan.ACE, Plan.EAGLE,Plan.BIRDIE].includes(mySubscription.plan_type as Plan)
     ) {
       return sendResponse(res, {
         statusCode: 403,
         success: false,
-        message: "Upgrade to Ace or Eagle to see who liked you!",
+        message: "Upgrade to Birdie,Eagle or Ace to see who liked you!",
         data: null,
       });
     }

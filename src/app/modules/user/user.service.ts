@@ -305,8 +305,20 @@ const updateUserProfileService = async (
     updateData.profileImage = urls[0]; // first image as profile
   }
 
-  // Handle location if lat/lng provided
+  // Handle nested objects to avoid overwriting the entire field
+  if (bodyData.vibe) {
+    for (const [key, value] of Object.entries(bodyData.vibe)) {
+      updateData[`vibe.${key}`] = value;
+    }
+    delete updateData.vibe;
+  }
 
+  if (bodyData.play) {
+    for (const [key, value] of Object.entries(bodyData.play)) {
+      updateData[`play.${key}`] = value;
+    }
+    delete updateData.play;
+  }
 
   const updatedUser = await User.findByIdAndUpdate(
     new mongoose.Types.ObjectId(userId),

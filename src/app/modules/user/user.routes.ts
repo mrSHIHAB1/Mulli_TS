@@ -4,6 +4,8 @@ import { blockUser, getBlockedUsers, unblockUser, userControllers } from "./user
 
 import { checkAuth } from "../../middlewares/checkAuth";
 import { Role } from "./user.interface";
+import { validateRequest } from "../../middlewares/validateRequest";
+import { userValidation } from "./user.validation";
 
 const router = Router();
 
@@ -28,7 +30,7 @@ router.patch("/update-fcm-token",checkAuth(...Object.values(Role)),userControlle
 router.post("/block",checkAuth(...Object.values(Role)) ,blockUser);      // Block a user
 router.post("/unblock",checkAuth(...Object.values(Role)), unblockUser);  // Unblock a user
 router.get("/blocked",checkAuth(...Object.values(Role)), getBlockedUsers); // List blocked users
-router.patch("/profile",checkAuth(...Object.values(Role)), userControllers.updateUserProfile);
+router.patch("/profile", checkAuth(...Object.values(Role)), validateRequest(userValidation.updateUserProfileZodSchema), userControllers.updateUserProfile);
 router.patch("/profile/image", checkAuth(...Object.values(Role)), fileUploader.upload.single("image"), userControllers.updateProfileImages);
 router.post("/profile/boost", checkAuth(...Object.values(Role)), userControllers.activateBoost);
 router.patch("/profile/incognito", checkAuth(...Object.values(Role)), userControllers.toggleIncognitoMode);
@@ -37,6 +39,7 @@ router.delete("/delete-account",checkAuth(...Object.values(Role)), userControlle
 router.get("/all", checkAuth(...Object.values(Role)), userControllers.getAllUsers);
 router.get("/userprofile/:userId", checkAuth(...Object.values(Role)), userControllers.getUserProfile);
 router.get("/:userId", checkAuth(...Object.values(Role)), userControllers.getUserById);
+
 
 export const userRoutes = router;
 

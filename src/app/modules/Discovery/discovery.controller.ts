@@ -40,7 +40,7 @@ export const getDiscoveryUsers = catchAsync(async (req: Request, res: Response) 
       openTo: req.query.openTo as string | undefined,
 
   };
-
+console.log("Discovery filters received:", filters);
   // Pagination
   const page = req.query.page ? Number(req.query.page) : 1;
 

@@ -160,6 +160,19 @@ export enum PetType {
   NONE = "NONE",
   OTHER = "OTHER",
 }
+export enum Language{
+  ENGLISH = "ENGLISH",
+  SPANISH = "SPANISH",
+  FRENCH = "FRENCH",
+  MANDARIN = "MANDARIN",
+  HINDI = "HINDI",
+  ARABIC = "ARABIC",
+  BENGALI = "BENGALI",
+  PORTUGUESE = "PORTUGUESE",
+  RUSSIAN = "RUSSIAN",
+  JAPANESE = "JAPANESE",
+  OTHER = "OTHER",
+}
 export interface IDailyClubhouseStats {
   date: Date;
   givenPoints: number;
@@ -176,6 +189,7 @@ export interface IBadgeProximityNotified {
   locallegend: boolean;
   clubhousechampion: boolean;
 }
+
 
 export interface IUser {
   _id?: Types.ObjectId;
@@ -229,7 +243,7 @@ export interface IUser {
   preferredGolfTimes?: string;
   images?: string[];
   prompt?: string[];
-  languages?: string[];
+  languages?: Language[];
   bio?: string;
   playstyle?: "Golf_Buddy" | "Golf_Date";
   location?: {
@@ -257,7 +271,6 @@ export interface IUser {
   enableFaceId?: boolean;
   badgePoints?: number;
   blockedUsers: Types.ObjectId[];
-  coins?: number;
   clubhouseStatus?: ClubhouseStatus;
   lastClubhouseActivity?: Date;
   clubhouseActiveSince?: Date;

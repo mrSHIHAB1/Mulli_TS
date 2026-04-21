@@ -22,7 +22,6 @@ router.get("/liked-by-me", checkAuth(...Object.values(Role)), getUsersILiked);
 router.get("/liked-me", checkAuth(...Object.values(Role)), getUsersWhoLikedMe);
 router.post("/rewind", checkAuth(...Object.values(Role)), rewindSwipe);
 
-// router.post("/gift", checkAuth(...Object.values(Role)), giftUser);
 
 export const swipeRouter = router;
 
