@@ -711,9 +711,7 @@ const handleAppleWebhook = async (req: Request) => {
       start_date: transaction.purchaseDate
         ? new Date(transaction.purchaseDate)
         : new Date(),
-      end_date: transaction.expiresDate
-        ? new Date(transaction.expiresDate)
-        : null,
+      end_date: new Date(transaction.expiresDate || 0),
       status: SubscriptionStatus.ACTIVE,
       auto_renew: true,
       metadata: transaction,

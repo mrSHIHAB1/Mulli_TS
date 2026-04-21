@@ -25,6 +25,13 @@ router.get(
   checkAuth(...Object.values(Role)),
   ChatController.getMessages,
 );
+
+router.patch(
+  "/mark-as-read/:otherUserId",
+  checkAuth(...Object.values(Role)),
+  ChatController.markAsRead,
+);
+
 router.delete("/message/:messageId", checkAuth(...Object.values(Role)), ChatController.deleteMessage);
 
 export const chatRoutes = router;

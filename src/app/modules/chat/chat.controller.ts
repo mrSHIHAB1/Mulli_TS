@@ -79,12 +79,25 @@ const deleteMessage = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-// Add to exports
+const markAsRead = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user as JwtPayload;
+  const { otherUserId } = req.params;
+
+  const result = await chatService.markAsReadService(user, otherUserId as string);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: "Messages marked as read successfully!",
+    data: result,
+  });
+});
 
 export const ChatController = {
   sendMessage,
   getConversations,
   getMessages,
-  deleteMessage
+  deleteMessage,
+  markAsRead
 
 };

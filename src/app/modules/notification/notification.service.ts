@@ -48,7 +48,11 @@ const pushToUserIds = async (
   body: string,
   data?: INotificationData,
 ) => {
-  const users = await User.find({ _id: { $in: userIds } }).select("fcmTokens");
+  const users = await User.find({ 
+    _id: { $in: userIds },
+    isOnline: { $ne: true } // Only push to users who are NOT online
+  }).select("fcmTokens");
+
   const tokens = users.flatMap((u: any) => u.fcmTokens || []).filter(Boolean);
 
   if (!tokens.length) return { successCount: 0, failureCount: 0 };

@@ -10,6 +10,35 @@ import { Message } from "./chat.model";
 import { formatChatTime } from "../../utils/timeFormatter";
 import { fileUploader } from "../../helpers/fileUpload";
 
+const emitUnreadCounts = async (receiverId: string, senderId?: string) => {
+  const io = getIo();
+  const receiverObjId = new Types.ObjectId(receiverId);
+
+  // Get total users who have sent unread messages to this receiver
+  const totalUnreadUsersList = await Message.distinct("sender", {
+    receiver: receiverObjId,
+    status: { $ne: MessageStatus.SEEN },
+  });
+
+  const payload: any = {
+    totalUnreadUsers: totalUnreadUsersList.length,
+  };
+
+  // If a specific sender is provided, get the unread count for that sender
+  if (senderId) {
+    const unreadCount = await Message.countDocuments({
+      receiver: receiverObjId,
+      sender: new Types.ObjectId(senderId),
+      status: { $ne: MessageStatus.SEEN },
+    });
+    payload.unreadCount = unreadCount;
+    payload.senderId = senderId;
+  }
+
+  // Emit to the receiver's room
+  io.to(receiverId).emit("unread_count_update", payload);
+};
+
 const sendMessageService = async (
   user: JwtPayload,
   receiverId: string,
@@ -32,22 +61,34 @@ const sendMessageService = async (
   if (!receiverUser) throw new AppError(404, "Receiver not found");
 
 
+  const io = getIo();
+  const receiverSockets = io.sockets.adapter.rooms.get(receiverId);
+  let isReceiverFocused = false;
+
+  if (receiverSockets) {
+    for (const socketId of receiverSockets) {
+      const socket = io.sockets.sockets.get(socketId);
+      if (socket && socket.data.userId === receiverId && socket.data.focusedChat === String(senderId)) {
+        isReceiverFocused = true;
+        break;
+      }
+    }
+  }
+
   // Create message document
   const messageDoc = await Message.create({
     sender: new Types.ObjectId(senderId),
     receiver: new Types.ObjectId(receiverId),
     message: {
       text: payload.message?.text || "",
-       media: payload.message?.media || [], 
+      media: payload.message?.media || [],
     },
-    status: payload.status || MessageStatus.SENT,
+    status: isReceiverFocused ? MessageStatus.SEEN : (payload.status || MessageStatus.SENT),
     replyTo: payload.replyTo,
   });
 
-  const io = getIo();
-
   // Emit only to receiver room
-  io.to(String(receiverId)).emit("message", messageDoc);
+   io.to(String(receiverId)).emit("message", messageDoc);
 
   // Notify receiver
   await NotificationService.notifyChatMessage(
@@ -55,6 +96,9 @@ const sendMessageService = async (
     senderUser,
     messageDoc,
   );
+
+  // Notify receiver in real-time about counts via socket
+  await emitUnreadCounts(receiverId, String(senderId));
 
   return messageDoc;
 };
@@ -131,7 +175,15 @@ const getConversationsService = async (user: JwtPayload) => {
     },
   }));
 
-  return formattedConversations;
+  const totalUnreadUsers = await Message.distinct("sender", {
+    receiver: userId,
+    status: { $ne: MessageStatus.SEEN },
+  });
+
+  return {
+    conversations: formattedConversations,
+    totalUnreadUsers: totalUnreadUsers.length,
+  };
 
   
 };
@@ -139,21 +191,51 @@ const getConversationsService = async (user: JwtPayload) => {
 const getMessagesService = async (user: JwtPayload, otherUserId: string) => {
   const userId = user.userId || user.id;
 
+  const result = await Message.updateMany(
+    {
+      sender: otherUserId,
+      receiver: userId,
+      status: { $ne: MessageStatus.SEEN },
+    },
+    { $set: { status: MessageStatus.SEEN } },
+  );
+
+  // Emit updated counts to current user (for other tabs)
+  await emitUnreadCounts(String(userId), otherUserId);
+
   const messages = await Message.find({
     $or: [
       { sender: userId, receiver: otherUserId },
       { sender: otherUserId, receiver: userId },
     ],
   })
-    .populate("sender", "full_name email profile_picture")
-    .populate("receiver", "full_name email profile_picture")
+    .populate("sender", "firstName lastName name email profileImage")
+    .populate("receiver", "firstName lastName name email profileImage")
     .populate({
       path: "replyTo",
-      populate: { path: "sender", select: "full_name email" },
+      populate: { path: "sender", select: "firstName lastName name email" },
     })
     .sort({ createdAt: 1 });
 
   return messages;
+};
+
+const markAsReadService = async (user: JwtPayload, otherUserId: string) => {
+  const userId = user.userId || user.id;
+
+  const result = await Message.updateMany(
+    {
+      sender: otherUserId,
+      receiver: userId,
+      status: { $ne: MessageStatus.SEEN },
+    },
+    { $set: { status: MessageStatus.SEEN } },
+  );
+
+  // Emit updated counts to current user (for other tabs)
+  await emitUnreadCounts(String(userId), otherUserId);
+
+  return result;
 };
 const deleteMessageService = async (user: JwtPayload, messageId: string) => {
   const senderId = user.userId || user.id;
@@ -197,6 +279,7 @@ export const chatService = {
   sendMessageService,
   getConversationsService,
   getMessagesService,
-  deleteMessageService, // ← add
+  deleteMessageService,
+  markAsReadService,
 };
 
