@@ -427,6 +427,48 @@ const notifyPostCommented = async (
   return { inAppCount: saved.length };
 };
 
+const notifyCommentLiked = async (
+  receiverId: string,
+  senderId: string,
+  senderName: string,
+  postId: string,
+  commentId: string,
+) => {
+  if (String(receiverId) === String(senderId)) return;
+
+  const receiverObjectId = new Types.ObjectId(receiverId);
+
+  const title = "Comment Liked!";
+  const body = `${senderName || "Someone"} liked your comment.`;
+
+  const data: INotificationData = {
+    senderId,
+    receiverId,
+    postId,
+    commentId,
+  };
+
+  const saved = await createInApp(
+    [receiverObjectId],
+    NotificationType.COMMENT_LIKED,
+    title,
+    body,
+    data,
+  );
+
+  await pushToUserIds([receiverObjectId], title, body, data);
+
+  const io = getIo();
+  io.to(`notification_${receiverId}`).emit("notification", {
+    type: NotificationType.COMMENT_LIKED,
+    title,
+    body,
+    data,
+  });
+
+  return { inAppCount: saved.length };
+};
+
 const BADGE_EARNED_MESSAGES: Record<ClubhouseBadge, { title: string; body: string }> = {
   [ClubhouseBadge.RISING_STAR]: {
     title: "Rising Star",
@@ -512,6 +554,7 @@ export const NotificationService = {
   notifyNewMatch,
   notifyPostLiked,
   notifyPostCommented,
+  notifyCommentLiked,
   sendTestPush,
   notifyBadgeEarned,
   notifyBadgeProximity,

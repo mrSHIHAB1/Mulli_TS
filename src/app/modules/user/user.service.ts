@@ -15,7 +15,7 @@ import { verifyAppleToken } from "../../utils/appleVerify";
 import { get } from "node:http";
 import { Swipe } from "../Swipe/swipe.model";
 import { Match } from "../Liked/match.model";
-import { sendOTPEmail } from "../../utils/email.util";
+import { sendOtpEmail } from "../../utils/email.util";
 
 
 const OTP_EXPIRE = 5 * 60; // 3 minutes
@@ -71,8 +71,8 @@ const createSignUpEmailOtp = async (
 ): Promise<string> => {
   const otp = generateOtp();
 
-  // await sendOtpEmail({ to: email, otp });
-  await sendOTPEmail(email, otp );
+  await sendOtpEmail({ to: email, otp });
+  // await sendOTPEmail(email, otp );
   await redisClient.setex(`otp:email:${email}`, OTP_EXPIRE, otp);
   return otp;
 };

@@ -12,6 +12,7 @@ import { dashboardRoutes } from "../modules/Dashboard/dashbaord.routes";
 import { notificationRoutes } from "../modules/notification/notification.router";
 import { emailRouter } from "../modules/Waitlist/waitlist.route";
 import { PaymentRoutes } from "../modules/payment/payment.route";
+import { promoCodeRoutes } from "../modules/promoCode/promoCode.routes";
 
 
 const router = express.Router();
@@ -64,6 +65,10 @@ const moduleRoutes = [
   {
     path:"/payment",
     route:PaymentRoutes
+  },
+  {
+    path: "/promo-code",
+    route: promoCodeRoutes,
   }
   
   

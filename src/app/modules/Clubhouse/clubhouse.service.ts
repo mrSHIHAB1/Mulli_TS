@@ -348,6 +348,19 @@ export const reactCommentService = async (
   }
 
   await comment.save();
+  
+
+  // Notify only for top-level comments. Skip reply comment like notifications.
+  if (newReactionType && !comment.parentId && String(comment.user) !== String(userId)) {
+    const sender = await User.findById(userId).select("firstName name");
+    await NotificationService.notifyCommentLiked(
+      String(comment.user),
+      userId,
+      sender?.firstName || (sender as any)?.name || "Someone",
+      String(comment.post),
+      String(comment._id),
+    );
+  }
 
   // Award or deduct points based on old/new reaction state
   const commentAuthorId = comment.user.toString();
