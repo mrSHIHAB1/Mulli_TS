@@ -2,7 +2,7 @@
 import { User } from "./user.model";
 import { Post, Comment } from "../Clubhouse/clubhouse.model";
 import { generateOtp } from "../../utils/otp.util";
-import { sendOtpEmail } from "../../utils/email.util";
+// import { sendOtpEmail } from "../../utils/email.util";
 import { redisClient } from "../../config/redis.config";
 import { createUserTokens } from "../../utils/userTokens";
 import mongoose from "mongoose";
@@ -15,6 +15,7 @@ import { verifyAppleToken } from "../../utils/appleVerify";
 import { get } from "node:http";
 import { Swipe } from "../Swipe/swipe.model";
 import { Match } from "../Liked/match.model";
+import { sendOTPEmail } from "../../utils/email.util";
 
 
 const OTP_EXPIRE = 5 * 60; // 3 minutes
@@ -70,8 +71,8 @@ const createSignUpEmailOtp = async (
 ): Promise<string> => {
   const otp = generateOtp();
 
-  await sendOtpEmail({ to: email, otp });
-  // await sendOTPEmail(email, otp );
+  // await sendOtpEmail({ to: email, otp });
+  await sendOTPEmail(email, otp );
   await redisClient.setex(`otp:email:${email}`, OTP_EXPIRE, otp);
   return otp;
 };
@@ -367,11 +368,11 @@ const activateBoost = async (userId: string) => {
 
   const plan = mySubscription.plan_type as Plan;
 
-  let boostLimit = 100;
+  let boostLimit = 1;
   if (plan === Plan.EAGLE) {
-    boostLimit = 200;
+    boostLimit = 3;
   } else if (plan === Plan.BIRDIE) {
-    boostLimit = 100;
+    boostLimit = 10;
   } else if (plan === Plan.ACE) {
     throw new Error("Ace members are already prioritized at the top of the feed");
   } else {
