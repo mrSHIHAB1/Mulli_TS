@@ -302,9 +302,9 @@ export const superLikeUser = catchAsync(
       const mySubscription = await SubscriptionService.getMySubscription(fromUser);
       const plan = mySubscription ? (mySubscription.plan_type as Plan) : null;
       console.log("My Subscription:", mySubscription);
-      let superLikeLimit = 100;
-      if (plan === Plan.BIRDIE) superLikeLimit = 300;
-      if (plan === Plan.EAGLE) superLikeLimit = 1000;
+      let superLikeLimit = 1;
+      if (plan === Plan.BIRDIE) superLikeLimit = 3;
+      if (plan === Plan.EAGLE) superLikeLimit = 10;
       if (plan === Plan.ACE) superLikeLimit = Infinity;
 
       const now = new Date();

@@ -5,6 +5,7 @@ import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
 import { postServices } from "./clubhouse.service";
 import { send } from "process";
+import { PostCategory, PostType } from "./clubhouse.interface ";
 
 /* ================= CREATE POST ================= */
 const createPost = catchAsync(async (req: Request, res: Response) => {
@@ -24,7 +25,7 @@ const createPost = catchAsync(async (req: Request, res: Response) => {
     postData = req.body;
   }
 
-
+console.log("Received post data:", postData);
   const uploadedMedia: string[] = [];
   const files = req.files as Express.Multer.File[] | undefined;
 
@@ -54,7 +55,8 @@ const createPost = catchAsync(async (req: Request, res: Response) => {
 
 /* ================= HOME FEED ================= */
 const getHomeFeed = catchAsync(async (req: Request, res: Response) => {
-  const result = await postServices.getHomeFeedService();
+  const currentUser: any = (req as any).user;
+  const result = await postServices.getHomeFeedService(currentUser.id);
 
   sendResponse(res, {
     success: true,
@@ -286,6 +288,10 @@ const getCategoryStats = catchAsync(async (req: Request, res: Response) => {
 const followPostType = catchAsync(async (req: Request, res: Response) => {
   const currentUser: any = (req as any).user;
   const { postType } = req.body;  
+  if(!postType || !Object.values(PostCategory
+  ).includes(postType)) {
+    throw new Error("Invalid post type");
+  }
   const result = await postServices.followPostTypeService(currentUser.id, postType);
 
   sendResponse(res, {
@@ -299,6 +305,9 @@ const followPostType = catchAsync(async (req: Request, res: Response) => {
 const unfollowPostType = catchAsync(async (req: Request, res: Response) => {
   const currentUser: any = (req as any).user;
   const { postType } = req.body;  
+  if(!postType || !Object.values(PostCategory).includes(postType)) {
+    throw new Error("Invalid post type");
+  }
   const result = await postServices.unfollowPostTypeService(currentUser.id, postType);  
   sendResponse(res, {
     success: true,
@@ -307,6 +316,23 @@ const unfollowPostType = catchAsync(async (req: Request, res: Response) => {
     data: result,
   });
 });
+
+const getFollowedPosts = catchAsync(async (req: Request, res: Response) => {
+  const currentUser: any = (req as any).user;
+  if (!currentUser?.id) {
+    throw new Error("Authenticated user required to fetch followed posts");
+  }
+
+  const result = await postServices.getFollowedPostsService(currentUser.id);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "Followed posts fetched successfully!",
+    data: result,
+  });
+});
+
 const superlikePost = catchAsync(async (req: Request, res: Response) => {
   const currentUser: any = (req as any).user;
   if (!currentUser?.id) {
@@ -372,6 +398,7 @@ export const postController = {
   getCategoryStats,
   followPostType,
   unfollowPostType,
+  getFollowedPosts,
   getClubhouseProfile,
   boostPost,
 };

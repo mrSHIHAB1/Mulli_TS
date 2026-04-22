@@ -40,10 +40,7 @@ const getReplies = async (commentId: string): Promise<any[]> => {
 };
 
 
-export const createPostService = async (
-  data: any,
-  userId: string
-): Promise<any> => {
+export const createPostService = async (data: any,userId: string): Promise<any> => {
 
   delete data.author;
 
@@ -58,43 +55,110 @@ export const createPostService = async (
   return post;
 };
 
-export const getHomeFeedService = async (): Promise<any[]> => {
+export const getHomeFeedService = async (userId: string): Promise<any[]> => {
+  const now = new Date();
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+  // Get followed post types
+  const followedPostTypesDocs = await ClubhouseFollow.find({ user: userId })
+    .select("postType");
+
+  const followedCategories = followedPostTypesDocs.map(
+    (f) => f.postType
+  );
 
   const posts = await Post.aggregate([
     {
       $addFields: {
-        sortBoostedAt: {
-          $cond: {
-            if: {
+        //  BOOST SCORE (only if active within 24h)
+        boostScore: {
+          $cond: [
+            {
               $and: [
                 { $ne: ["$boostedAt", null] },
                 { $gte: ["$boostedAt", oneDayAgo] },
               ],
             },
-            then: "$boostedAt",
-            else: null,
-          },
+            300,
+            0,
+          ],
+        },
+
+        //  FOLLOW SCORE
+        followScore: {
+          $cond: [
+            { $in: ["$category", followedCategories] },
+            150,
+            0,
+          ],
+        },
+
+        //  RECENCY SCORE (newer = higher)
+        recencyScore: {
+          $divide: [
+            1000000000,
+            {
+              $add: [
+                { $subtract: [now, "$createdAt"] },
+                1,
+              ],
+            },
+          ],
+        },
+
+        //  ENGAGEMENT SCORE (optional but powerful)
+        engagementScore: {
+          $add: [
+            { $multiply: [{ $size: { $ifNull: ["$likes", []] } }, 2] },
+            { $multiply: [{ $size: { $ifNull: ["$comments", []] } }, 3] },
+          ],
         },
       },
     },
+
+    // FINAL SCORE
     {
-      $sort: {
-        sortBoostedAt: -1,
-        createdAt: -1,
+      $addFields: {
+        score: {
+          $add: [
+            "$boostScore",
+            "$followScore",
+            "$recencyScore",
+            "$engagementScore",
+          ],
+        },
       },
     },
+
+    //  SORT BY FINAL SCORE
+    {
+      $sort: {
+        score: -1,
+      },
+    },
+
+    //  REMOVE TEMP FIELDS
     {
       $project: {
+        score: 0,
+        boostScore: 0,
+        followScore: 0,
+        recencyScore: 0,
+        engagementScore: 0,
         reports: 0,
-        sortBoostedAt: 0,
       },
     },
   ]);
 
   return Post.populate(posts, [
-    { path: "author", select: "firstName lastName profileImage skillLevel badgePoints" },
-    { path: "reactions.user", select: "firstName lastName profileImage" },
+    {
+      path: "author",
+      select: "firstName lastName profileImage skillLevel badgePoints",
+    },
+    {
+      path: "reactions.user",
+      select: "firstName lastName profileImage",
+    },
   ]);
 };
 
@@ -366,8 +430,7 @@ export const deletePostService = async (
   if (!post) {
     throw new Error("Post not found");
   }
-
-  if (post.author.toString() !== userId) {
+  if (!post.author.equals(new mongoose.Types.ObjectId(userId))) {
     throw new Error("You are not authorized to delete this post");
   }
 
@@ -390,7 +453,7 @@ export const deleteCommentService = async (
     throw new Error("Comment not found");
   }
 
-  if (comment.user.toString() !== userId) {
+  if (!comment.user.equals(new mongoose.Types.ObjectId(userId))) {
     throw new Error("You are not authorized to delete this comment");
   }
 
@@ -572,6 +635,13 @@ export const unfollowPostTypeService = async (userId: string, postType: string):
   return result;
 };
 
+export const getFollowedPostsService = async (userId: string): Promise<any> => {
+  // Get all post types the user follows
+  const followedPostTypes = await ClubhouseFollow.find({ user: userId });
+return followedPostTypes;
+  
+};
+
 export const getClubhouseProfileService = async (userId: string): Promise<any> => {
   return getClubhouseProfile(userId);
 };
@@ -662,6 +732,7 @@ export const postServices = {
   getCategoryStatsService,
   followPostTypeService,
   unfollowPostTypeService,
+  getFollowedPostsService,
   getClubhouseProfileService,
   boostPostService,
 };

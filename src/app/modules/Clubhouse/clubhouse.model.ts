@@ -10,7 +10,7 @@ import {
   Visibility,
   MediaType,
   ICommentDocument,
-  VibeType,
+  
   ReportType,
   ICategorySetting,
  
@@ -60,30 +60,15 @@ const clubhouseSchema = new Schema<IClubhouseDocument>(
         lowest: { type: Number },
         highest: { type: Number }
       },
-      playStyle: {
-        type: String,
-        enum: Object.values(PlayStyle),
-      },
+      playStyle: [String],
       tees: { type: String },
       yardage: { type: Number },
 
 
-      mobility: {
-        type: String,
-        enum: Object.values(Mobility),
-      },
-      conversation: {
-        type: String,
-        enum: Object.values(Conversation),
-      },
-      vibe: {
-        type: String,
-        enum: Object.values(VibeType),
-      },
-      postRoundInterest: {
-        type: String,
-        enum: Object.values(PostRoundInterest),
-      },
+      mobility: [String],
+      conversation: [String],
+     vibe: [String],
+      postRoundInterest:[String],
       notes: String,
       gimimies: { type: Boolean, default: false },
       Mulligans: { type: Boolean, default: false },

@@ -11,8 +11,8 @@ const router = Router();
 router.post("/posts", checkAuth(...Object.values(Role)), fileUploader.upload.array("media", 5), postController.createPost);
 
 // Public home feed (or restrict with checkAuth if needed)
-router.get("/", postController.getHomeFeed);
-router.get("/posts/:id", postController.getPostById);
+router.get("/", checkAuth(...Object.values(Role)), postController.getHomeFeed);
+router.get("/posts/:id", checkAuth(...Object.values(Role)), postController.getPostById);
 
 // Interactions require auth
 router.post("/like/:id", checkAuth(...Object.values(Role)), postController.likePost);
@@ -22,7 +22,7 @@ router.post("/:id/gift", checkAuth(...Object.values(Role)), postController.sendG
 
 // New Comment Routes
 router.post("/comment/:postId", checkAuth(...Object.values(Role)), postController.createComment);
-router.get("/comment/:postId", postController.getComments);
+router.get("/comment/:postId", checkAuth(...Object.values(Role)), postController.getComments);
 router.post("/comment/like/:commentId", checkAuth(...Object.values(Role)), postController.likeComment);
 
 router.post("/comments/reply/:commentId", checkAuth(...Object.values(Role)), postController.replyToComment);
@@ -40,7 +40,8 @@ router.get("/category-stats", checkAuth(...Object.values(Role)), postController.
 
 //follow post type
 router.post("/followpost", checkAuth(...Object.values(Role)), postController.followPostType);
- router.post("/unfollowpost", checkAuth(...Object.values(Role)), postController.unfollowPostType);
+router.post("/unfollowpost", checkAuth(...Object.values(Role)), postController.unfollowPostType);
+router.get("/followed-posts", checkAuth(...Object.values(Role)), postController.getFollowedPosts);
 
 // Clubhouse points & badge profile
 router.get("/profile/:userId", checkAuth(...Object.values(Role)), postController.getClubhouseProfile);

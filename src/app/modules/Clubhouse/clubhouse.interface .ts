@@ -81,13 +81,7 @@ export interface IReactionCount {
   fire: number;
   haha: number;
 }
-export interface IVibe {
-  music?: boolean;
-  beerCart?: boolean;
-  smoker?: boolean;
-  mulligans?: boolean;
-  gimmies?: boolean;
-}
+
 
 export interface IPlayDetails {
   golfCourse?: string;
@@ -100,7 +94,7 @@ export interface IPlayDetails {
   playStyle?: PlayStyle;
   mobility?: Mobility;
   conversation?: Conversation;
-  vibe?: IVibe;
+  vibe?: string[];
   postRoundInterest?: PostRoundInterest;
   notes?: string;
 }

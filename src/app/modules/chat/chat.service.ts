@@ -53,7 +53,7 @@ const sendMessageService = async (
 
 
   const [senderUser, receiverUser] = await Promise.all([
-    User.findById(senderId).select("_id firstName lastName"), 
+    User.findById(senderId).select("_id firstName lastName"),
     User.findById(receiverId).select("_id firstName lastName"),
   ]);
 
@@ -88,7 +88,7 @@ const sendMessageService = async (
   });
 
   // Emit only to receiver room
-   io.to(String(receiverId)).emit("message", messageDoc);
+  io.to(String(receiverId)).emit("message", messageDoc);
 
   // Notify receiver
   await NotificationService.notifyChatMessage(
@@ -185,7 +185,7 @@ const getConversationsService = async (user: JwtPayload) => {
     totalUnreadUsers: totalUnreadUsers.length,
   };
 
-  
+
 };
 
 const getMessagesService = async (user: JwtPayload, otherUserId: string) => {

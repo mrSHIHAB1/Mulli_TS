@@ -23,7 +23,7 @@ export const chatSocket = (io: Server) => {
     socket.on("unfocus-chat", () => {
       socket.data.focusedChat = null;
     });
-    
+
     socket.on("disconnect", () => {
     });
   });
