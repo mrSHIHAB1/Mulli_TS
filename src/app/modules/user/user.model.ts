@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
-import { AuthProviderType, CannabisUsage, ClubhouseBadge, ClubhouseStatus, CommunicationStyle, EducationPlan, Energy, IsActive, IUser, Line, LoveLanguage, Mentality, moreAboutGender, Pace, PetType, PlayPreference, PlayStyle, Politics, Role, SocialStyle, Workout, Zodiac } from "./user.interface";
+import { AuthProviderType, CannabisUsage, ClubhouseBadge, ClubhouseStatus, CommunicationStyle, EducationPlan, Energy, IsActive, IUser, ILineItem, ILinePrompt, Line, LoveLanguage, Mentality, moreAboutGender, Pace, PetType, PlayPreference, PlayStyle, Politics, Role, SocialStyle, Workout, Zodiac } from "./user.interface";
 
 
 
@@ -29,17 +29,20 @@ const UserSchema: Schema<IUser> = new Schema(
     isVerified: { type: Boolean, default: false },
     isblocked: { type: Boolean, default: false },
     isOnline: { type: Boolean, default: false },
-    line: {
-      type: {
-        type: String,
-        enum: Object.values(Line),
-        
+    line: [
+      {
+        type: {
+          type: String,
+          enum: Object.values(Line),
+        },
+        prompts: [
+          {
+            text: { type: String },
+            description: { type: String },
+          },
+        ],
       },
-      prompts: {
-        type: [String],
-        default: [],
-      },
-    },
+    ],
 
     // Password & auth providers (for local/google/apple login)
     password: { type: String, select: false },
@@ -199,7 +202,7 @@ preferredDistance: { type: Number, default: 100 },
 
 
     //newly added fields
-  moreAboutGender: {type: String,enum: Object.values(moreAboutGender ),},
+  moreAboutGender: { type: String },
   politics: {
   type: String,
   enum: Object.values(Politics),

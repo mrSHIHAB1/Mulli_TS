@@ -190,6 +190,16 @@ export interface IBadgeProximityNotified {
   clubhousechampion: boolean;
 }
 
+export interface ILinePrompt {
+  text: string;
+  description: string;
+}
+
+export interface ILineItem {
+  type: Line;
+  prompts: ILinePrompt[];
+}
+
 
 export interface IUser {
   _id?: Types.ObjectId;
@@ -280,10 +290,7 @@ export interface IUser {
   lastDecayAppliedAt?: Date | null;
   lastInactivityNotificationAt?: Date | null;
   badgeProximityNotified?: IBadgeProximityNotified;
-  line?: {
-    type: Line;
-    prompts: string[];
-  };
+  line?: ILineItem[];
 
   // Boost fields
   boostedUntil?: Date | null;
@@ -304,7 +311,7 @@ export interface IUser {
   lastSuperLikeResetDate?: Date | null;
 
   isIncognito?: boolean;
-  moreAboutGender?: moreAboutGender;
+  moreAboutGender?: string;
   politics?: Politics;
 zodiac?: Zodiac;
 educationPlan?: EducationPlan;

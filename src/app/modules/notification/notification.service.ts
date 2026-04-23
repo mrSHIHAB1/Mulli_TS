@@ -50,7 +50,8 @@ const pushToUserIds = async (
 ) => {
   const users = await User.find({ 
     _id: { $in: userIds },
-    isOnline: { $ne: true } // Only push to users who are NOT online
+    isOnline: { $ne: true }, // Only push to users who are NOT online
+    reciveNotifications: { $ne: false } // Only push to users who have notifications enabled
   }).select("fcmTokens");
 
   const tokens = users.flatMap((u: any) => u.fcmTokens || []).filter(Boolean);
