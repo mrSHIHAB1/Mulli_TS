@@ -16,6 +16,7 @@ import { get } from "node:http";
 import { Swipe } from "../Swipe/swipe.model";
 import { Match } from "../Liked/match.model";
 import { sendOtpEmail } from "../../utils/email.util";
+import { Role } from "./user.interface";
 
 
 const OTP_EXPIRE = 5 * 60; // 3 minutes
@@ -603,6 +604,36 @@ const getUserProfileWithRelationship = async (currentUserId: string, targetUserI
     }
   };
 }
+export const adminLogin = async (email: string) => {
+  const existingUser = await User.findOne({ email });
+
+  if (!existingUser) {
+    return {
+      success: false,
+      message: "User not found",
+    };
+  }
+
+  if (existingUser.role !== Role.ADMIN) {
+    return {
+      success: false,
+      message: "User is not admin",
+    };
+  }
+
+  const otp = generateOtp();
+
+  await sendOtpEmail({ to: email, otp });
+  await redisClient.setex(`otp:email:${email}`, OTP_EXPIRE, otp);
+
+  return {
+    success: true,
+    message: "OTP sent successfully",
+    data: {otp}
+  };
+};
+
+
 
 export const userService = {
   createUser,
@@ -627,4 +658,5 @@ export const userService = {
   toggleIncognitoMode,
   getUserById,
   getUserProfileWithRelationship,
+  adminLogin
 }

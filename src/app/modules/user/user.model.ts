@@ -116,7 +116,7 @@ provider: { type: String, enum: ["apple", "google", "phone", "email"] },
     clubhouseStatus: {
       type: String,
       enum: Object.values(ClubhouseStatus),
-      default: ClubhouseStatus.IN_CLUBHOUSE,
+      default: ClubhouseStatus.CHECKED_OUT,
     },
     lastClubhouseActivity: { type: Date, default: null },
     clubhouseActiveSince: { type: Date, default: null },

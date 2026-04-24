@@ -13,6 +13,8 @@ router.post("/login/phone/send-otp", AuthControllers.sendPhoneOtp);
 router.post("/login/email", AuthControllers.loginWithEmail);
 router.post("/login/phone", AuthControllers.loginWithPhone);
 
+//admin login
+
 // Public routes - Token refresh
 router.post("/refresh-token", AuthControllers.refreshToken);
 

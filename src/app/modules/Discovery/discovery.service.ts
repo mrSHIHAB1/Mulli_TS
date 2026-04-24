@@ -1,10 +1,14 @@
 
 import User from "../user/user.model";
 import Swipe from "../Swipe/swipe.model";
+import DiscoveryScore from "./discovery-score.model";
 import { calculateAge } from "../../utils/calculateAge";
 import { SubscriptionService } from "../subscription/subscription.service";
 import { Plan } from "../subscription/subscription.interface";
 import AppError from "../../errorHelpers/AppError";
+import { SwipeDeckService } from "./swiped-deck.service";
+import { BucketCategorization } from "./bucket.service";
+import { calculateAndUpdateUserScores } from "./scoring.service";
 
 interface Filters {
   // Basic
@@ -14,7 +18,7 @@ interface Filters {
   minDistance?: number;
   maxDistance?: number;
 
-  // Premium
+  // PremiumFm
   minPhotos?: number;
   hasBio?: boolean;
 
@@ -38,245 +42,119 @@ export const discoveryService = async (
 ) => {
   if (!authUser?.id) throw new Error("Unauthorized");
 
-  //  Get logged-in user
+  // Get logged-in user
   const me = await User.findById(authUser.id);
   if (!me) throw new Error("User not found");
 
-  if (!me.location?.coordinates?.length) return { users: [], pagination: { total: 0, currentPage: 1, perPage: 20, totalPages: 0 } };
-
-  const today = new Date();
-
-  //  Age Filter
-  const ageFilter: any = {};
-  if (filters.minAge || filters.maxAge) {
-    ageFilter.birthdate = {};
-
-    if (filters.minAge) {
-      const maxBirth = new Date();
-      maxBirth.setFullYear(today.getFullYear() - filters.minAge);
-      ageFilter.birthdate.$lte = maxBirth;
-    }
-
-    if (filters.maxAge) {
-      const minBirth = new Date();
-      minBirth.setFullYear(today.getFullYear() - filters.maxAge);
-      ageFilter.birthdate.$gte = minBirth;
-    }
+  if (!me.location?.coordinates?.length) {
+    return {
+      users: [],
+      pagination: { total: 0, currentPage: 1, perPage: 20, totalPages: 0 },
+    };
   }
 
-  // Get swiped user IDs to exclude them from the feed
-  const swipedUserIds = await Swipe.find({ fromUser: authUser.id }).distinct("toUser");
-  
-  // Combine swiped IDs and blocked IDs for exclusion
-  const excludedIds = [...swipedUserIds, ...(me.blockedUsers || [])];
+  // Determine mode from user's playstyle or default to buddy
+  const mode = me.playstyle === "Golf_Date" ? "date" : "buddy";
 
-  //  Base Query
-  const query: any = {
-    _id: { $ne: me._id, $nin: excludedIds },
-    blockedUsers: { $ne: me._id }, // Don't show users who have blocked me
-    isProfileComplete: true,
-    isDeleted: false,
-    isblocked: false,
-    isIncognito: { $ne: true },
-    ...ageFilter,
-  };
-
-  //  Gender Logic
-  const genderToShow = filters.gender ?? me.genderPreference ?? "ALL";
-  if (genderToShow && genderToShow !== "ALL") {
-    query.gender = genderToShow;
-  }
-
-  //  Distance Setup
-  const geoNear: any = {
-    near: { type: "Point", coordinates: me.location.coordinates },
-    distanceField: "distance",
-    spherical: true,
-  };
-
-  if (filters.minDistance)
-    geoNear.minDistance = filters.minDistance * 1000;
-
-  if (filters.maxDistance)
-    geoNear.maxDistance = filters.maxDistance * 1000;
-
-  // PREMIUM check
+  // PREMIUM check for filters
   const mySubscription = await SubscriptionService.getMySubscription(authUser.id);
   const plan = mySubscription?.plan_type as Plan;
 
-  const isAceOrEagle = mySubscription && [Plan.ACE, Plan.EAGLE].includes(plan);
+  const isAceOrEagle =
+    mySubscription && [Plan.ACE, Plan.EAGLE].includes(plan);
   const isBirdie = mySubscription && plan === Plan.BIRDIE;
   const isPremium = isAceOrEagle || isBirdie;
 
   // Filters Birdie can use
-  const hasBirdieFilters = filters.hasBio !== undefined || filters.minHeight !== undefined;
+  const hasBirdieFilters =
+    filters.hasBio !== undefined || filters.minHeight !== undefined;
 
   // Filters ONLY Ace/Eagle can use
-  const hasTopTierFilters = filters.minPhotos !== undefined ||
+  const hasTopTierFilters =
+    filters.minPhotos !== undefined ||
     filters.maxHeight !== undefined ||
     filters.ethnicity !== undefined ||
     filters.politics !== undefined ||
     filters.religion !== undefined ||
     filters.openTo !== undefined ||
-    filters.hopingToFind !== undefined || 
+    filters.hopingToFind !== undefined ||
     (filters.interests && filters.interests.length > 0) ||
     (filters.languages && filters.languages.length > 0);
 
   if (hasTopTierFilters && !isAceOrEagle) {
-    throw new AppError(403, "Please upgrade to Ace or Eagle to use these advanced filters.");
+    throw new AppError(
+      403,
+      "Please upgrade to Ace or Eagle to use these advanced filters."
+    );
   }
 
   if (hasBirdieFilters && !isPremium) {
-    throw new AppError(403, "Please upgrade to Birdie, Ace or Eagle to use these filters.");
+    throw new AppError(
+      403,
+      "Please upgrade to Birdie, Ace or Eagle to use these filters."
+    );
   }
 
-  if (isPremium) {
-    // Min Photos
-    if (filters.minPhotos) {
-  query.$expr = {
-    $gte: [
-      { $size: { $ifNull: ["$images", []] } },
-      filters.minPhotos,
-    ],
-  };
-}
+  // Ensure buckets are calculated for all users
+  const latestBucketCalc = await DiscoveryScore.findOne({ mode })
+    .sort({ bucketCalculatedAt: -1 })
+    .select("bucketCalculatedAt");
 
-    //  Has Bio
-    if (filters.hasBio === true) {
-      query.bio = { $exists: true, $ne: "" };
-    }
+  const bucketLastCalc = latestBucketCalc?.bucketCalculatedAt
+    ? new Date(latestBucketCalc.bucketCalculatedAt)
+    : new Date(0);
+  const hoursSinceCalc = (Date.now() - bucketLastCalc.getTime()) / (1000 * 60 * 60);
 
-    // Height Range
-    if (filters.minHeight || filters.maxHeight) {
-      query.height = {};
-      if (filters.minHeight) query.height.$gte = filters.minHeight;
-      if (filters.maxHeight) query.height.$lte = filters.maxHeight;
-    }
+  // Initialize scores if none exist for this mode
+  const scoreCount = await DiscoveryScore.countDocuments({ mode });
+  const totalEligibleUsers = await User.countDocuments({
+    isProfileComplete: true,
+    isDeleted: false,
+    isblocked: false,
+    "location.coordinates": { $exists: true, $ne: null },
+  });
 
-    // Simple Match Fields
-    if (filters.ethnicity) query.ethnicity = filters.ethnicity;
-    if (filters.politics) query.politics = filters.politics;
-    if (filters.religion) query.religion = filters.religion;
-    if (filters.openTo) query.openTo = filters.openTo;
-    if (filters.hopingToFind) query.hopingToFind = filters.hopingToFind;
+  console.log(
+    `[Discovery] Mode: ${mode}, Eligible users: ${totalEligibleUsers}, DiscoveryScore records: ${scoreCount}`
+  );
 
-    // Array Match
-    if (filters.interests?.length) {
-      query.interests = { $in: filters.interests };
-    }
+  // Initialize scores if missing or incomplete
+  if (scoreCount === 0 || scoreCount < totalEligibleUsers) {
+    console.log(
+      `Initializing/updating discovery scores for ${mode} mode (${scoreCount}/${totalEligibleUsers})...`
+    );
+    const allUsers = await User.find({
+      isProfileComplete: true,
+      isDeleted: false,
+      isblocked: false,
+      "location.coordinates": { $exists: true, $ne: null },
+    }).select("_id");
 
-    if (filters.languages?.length) {
-      query.languages = { $in: filters.languages };
-    }
+    const userIds = allUsers.map((u) => u._id.toString());
+    await calculateAndUpdateUserScores(userIds, authUser.id);
+    console.log(`Score initialization complete for ${mode} mode`);
   }
 
-  // Aggregation Pipeline
-  const perPage = 20;
-  const skip = (page - 1) * perPage;
+  // Recalculate buckets every 24 hours
+  if (hoursSinceCalc > 24) {
+    console.log(`Recalculating buckets for ${mode} mode...`);
+    await BucketCategorization.recategorizeAllUsers(mode);
+  }
 
-  const basePipeline: any[] = [
-    { $geoNear: geoNear },
-    { $match: query },
-    {
-      $addFields: {
-        distanceKm: {
-          $round: [{ $divide: ["$distance", 1000] }, 1],
-        },
-      },
-    },
-    // Subscription ranking for feed priority
-    {
-      $lookup: {
-        from: "subscriptions",
-        localField: "_id",
-        foreignField: "userId",
-        pipeline: [
-          { $match: { status: "ACTIVE" } },
-          { $sort: { createdAt: -1 } },
-          { $limit: 1 },
-          { $project: { plan_type: 1 } }
-        ],
-        as: "activeSubscription"
-      }
-    },
-    {
-      $addFields: {
-        subscriptionPlan: { $arrayElemAt: ["$activeSubscription.plan_type", 0] }
-      }
-    },
-    {
-      $addFields: {
-        subscriptionRank: {
-          $switch: {
-            branches: [
-              { case: { $eq: ["$subscriptionPlan", Plan.ACE] }, then: 10 },
-              {
-                case: {
-                  $and: [
-                    { $eq: ["$subscriptionPlan", Plan.EAGLE] },
-                    { $gt: ["$boostedUntil", today] }
-                  ]
-                },
-                then: 9
-              },
-              {
-                case: {
-                  $and: [
-                    { $eq: ["$subscriptionPlan", Plan.BIRDIE] },
-                    { $gt: ["$boostedUntil", today] }
-                  ]
-                },
-                then: 8
-              }
-            ],
-            default: 0
-          }
-        }
-      }
-    },
-    {
-      $sort: { subscriptionRank: -1, distanceKm: 1 }
-    }
-  ];
+  // Generate swipe deck using the new ranking system
+  const deck = await SwipeDeckService.generateSwipeDeck(
+    authUser.id,
+    mode,
+    filters,
+    page
+  );
 
-  // Faceted aggregation for count and paginated results
-  const pipeline: any[] = [
-    ...basePipeline,
-    {
-      $facet: {
-        metadata: [
-          { $count: "total" }
-        ],
-        data: [
-          { $skip: skip },
-          { $limit: perPage },
-          {
-            $project: {
-              password: 0,
-              email: 0,
-              phone: 0,
-              auth_providers: 0,
-              __v: 0,
-              createdAt: 0,
-              updatedAt: 0,
-              activeSubscription: 0,
-            },
-          },
-        ]
-      }
-    }
-  ];
-
-  const result = await User.aggregate(pipeline);
-  const total = result[0]?.metadata[0]?.total || 0;
-  const users = result[0]?.data || [];
-
-  // Transform Response
-  const transformed = users.map((u: any) => ({
+  // Transform response to match expected format
+  const transformed = deck.users.map((u) => ({
     id: u._id,
     firstName: u.firstName,
     lastName: u.lastName,
-    age: calculateAge(u.birthdate),
+    age: u.age,
     distanceKm: u.distanceKm,
     profileImage: u.profileImage,
     images: u.images,
@@ -284,21 +162,35 @@ export const discoveryService = async (
     hopingToFind: u.hopingToFind,
     gender: u.gender,
     playstyle: u.playstyle,
-    height: u.height,
-    religion: u.religion,
-    handicaprange: u.handicaprange, 
-    tcp:"N/A",
-    hasMullix: u.subscriptionPlan === Plan.ACE || u.subscriptionPlan === Plan.EAGLE,
-    subscriptionType: u.subscriptionPlan || "NONE"
+    height: u.height || 0,
+    religion: u.religion || "",
+    handicaprange: { minRange: 0, maxRange: 100 },
+    tcp: u.baseScore.toString(),
+    hasMullix: u.isBoosted,
+    subscriptionType: u.subscriptionType || "FREE", // User's subscription tier
+    // New ranking fields
+    bucket: u.bucket,
+    baseScore: u.baseScore,
+    finalScore: u.finalScore,
+    isNewUser: u.isNewUser,
+    trustScore: u.trustScore,
+    // Filter fields
+    bio: u.bio,
+    ethnicity: u.ethnicity,
+    politics: u.politics,
+    interests: u.interests,
+    languages: u.languages,
+    openTo: u.openTo,
   }));
 
   return {
     users: transformed,
     pagination: {
-      total,
-      currentPage: page,
-      perPage,
-      totalPages: Math.ceil(total / perPage)
-    }
+      total: deck.pagination.total,
+      currentPage: deck.pagination.currentPage,
+      perPage: deck.pagination.perPage,
+      totalPages: deck.pagination.totalPages,
+    },
+    metadata: deck.metadata,
   };
 };

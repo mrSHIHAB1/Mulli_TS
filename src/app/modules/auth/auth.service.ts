@@ -10,6 +10,8 @@ import { userService } from "../user/user.service";
 import Subscription from "../subscription/subscription.model";
 import { SubscriptionStatus } from "../subscription/subscription.interface";
 import { getClubhouseProfile } from "../Clubhouse/clubhouse.points";
+import { error } from "node:console";
+import { Role } from "../user/user.interface";
 
 interface ServiceResult<T = any> {
   success: boolean;
@@ -217,6 +219,8 @@ const getNewAccessToken = async (refreshToken: string) => {
     accessToken: newAccessToken,
   };
 };
+
+
 
 export const AuthServices = {
   sendEmailOtp,

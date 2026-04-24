@@ -490,6 +490,25 @@ const getUserProfile = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+export const adminlogin=catchAsync(async (req: Request, res: Response) => {
+  const { email} = req.body;
+  if (!email) {
+    return sendResponse(res, {
+      statusCode: 400,
+      success: false,
+      message: "Email required",
+      data: null,
+    });
+  }
+  const result = await userService.adminLogin(email);
+  sendResponse(res, {
+    statusCode: result.success ? 200 : 400,
+    success: result.success,
+    message: result.message,
+    data: result.data || null,
+  });
+});
+
 export const userControllers = {
   createUser,
   sendEmailOtp,
@@ -506,6 +525,7 @@ export const userControllers = {
   appleLoginController,
   toggleIncognitoMode,
   getUserById,
-  getUserProfile
+  getUserProfile,
+  adminlogin
 };
 
