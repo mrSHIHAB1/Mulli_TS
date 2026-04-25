@@ -9,6 +9,8 @@ import AppError from "../../errorHelpers/AppError";
 import { Message } from "./chat.model";
 import { formatChatTime } from "../../utils/timeFormatter";
 import { fileUploader } from "../../helpers/fileUpload";
+import { VelocityService } from "../TrustSafetyEngine/velocity.service";
+import { TrustSafetyService } from "../TrustSafetyEngine/trustSafety.service";
 
 const emitUnreadCounts = async (receiverId: string, senderId?: string) => {
   const io = getIo();
@@ -60,6 +62,21 @@ const sendMessageService = async (
   if (!senderUser) throw new AppError(401, "Invalid sender");
   if (!receiverUser) throw new AppError(404, "Receiver not found");
 
+  // Requirement: Profile must be completed before messaging (Photos + Bio + Verified)
+  // const fullSender = await User.findById(senderId).select("images bio isVerified");
+  // if (!fullSender?.bio || !fullSender?.images?.length || !fullSender?.isVerified) {
+  //    if (!fullSender?.bio || !fullSender?.images?.length || !fullSender?.isVerified) {
+  //   throw new AppError(403, "Complete your profile (Photos, Bio, and Verification) before messaging");
+  // }
+
+  // // Velocity and Pattern Detection
+  // const messageText = payload.message?.text || "";
+  // if (messageText) {
+  //   await VelocityService.checkMessagingVelocity(String(senderId));
+  //   await VelocityService.checkCopyPastePattern(String(senderId), messageText);
+  //   await VelocityService.checkLinks(String(senderId), messageText);
+  // }
+
 
   const io = getIo();
   const receiverSockets = io.sockets.adapter.rooms.get(receiverId);
@@ -99,6 +116,17 @@ const sendMessageService = async (
 
   // Notify receiver in real-time about counts via socket
   await emitUnreadCounts(receiverId, String(senderId));
+
+  // Handle Meaningful Conversation (+5 score if both exchanged 5+ messages)
+  const senderToReceiverCount = await Message.countDocuments({ sender: senderId, receiver: receiverId });
+  const receiverToSenderCount = await Message.countDocuments({ sender: receiverId, receiver: senderId });
+
+  if (senderToReceiverCount === 5 && receiverToSenderCount >= 5) {
+     await TrustSafetyService.handleMeaningfulConversation(new Types.ObjectId(senderId));
+  }
+  if (receiverToSenderCount === 5 && senderToReceiverCount >= 5) {
+     await TrustSafetyService.handleMeaningfulConversation(new Types.ObjectId(receiverId));
+  }
 
   return messageDoc;
 };

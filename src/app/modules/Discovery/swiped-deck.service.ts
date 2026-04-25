@@ -473,9 +473,16 @@ export class SwipeDeckService {
     filters: any,
     authUser: Partial<IUser>
   ): UserWithScore[] {
+    const effectiveGenderFilter = filters.gender || authUser.genderPreference;
+
     return users.filter((user) => {
-      // Gender filter
-      if (filters.gender && filters.gender !== "ALL" && user.gender !== filters.gender) {
+      // Use the explicit gender filter when provided, otherwise fall back
+      // to the logged-in user's saved gender preference.
+      if (
+        effectiveGenderFilter &&
+        effectiveGenderFilter !== "ALL" &&
+        user.gender !== effectiveGenderFilter
+      ) {
         return false;
       }
 

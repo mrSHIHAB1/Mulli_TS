@@ -1,8 +1,5 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
-import { AuthProviderType, CannabisUsage, ClubhouseBadge, ClubhouseStatus, CommunicationStyle, EducationPlan, Energy, IsActive, IUser, ILineItem, ILinePrompt, Line, LoveLanguage, Mentality, moreAboutGender, Pace, PetType, PlayPreference, PlayStyle, Politics, Role, SocialStyle, Workout, Zodiac } from "./user.interface";
-
-
-
+import { AuthProviderType, CannabisUsage, ClubhouseBadge, ClubhouseStatus, CommunicationStyle, EducationPlan, IsActive, IUser,  Line, LoveLanguage, PetType,  Politics, Role, Workout, Zodiac } from "./user.interface";
 
 const UserSchema: Schema<IUser> = new Schema(
   {
@@ -31,12 +28,14 @@ const UserSchema: Schema<IUser> = new Schema(
     isOnline: { type: Boolean, default: false },
     line: [
       {
+        _id: false,
         type: {
           type: String,
           enum: Object.values(Line),
         },
         prompts: [
           {
+            _id: false,
             text: { type: String },
             description: { type: String },
           },
@@ -109,7 +108,7 @@ const UserSchema: Schema<IUser> = new Schema(
     useLocation: { type: Boolean, default: false },
     reciveNotifications: { type: Boolean, default: true },
     appleId: { type: String, index: true },
-provider: { type: String, enum: ["apple", "google", "phone", "email"] },
+    provider: { type: String, enum: ["apple", "google", "phone", "email"] },
     profileImage: { type: String },
     enableFaceId: { type: Boolean, default: false },
     badgePoints: { type: Number, default: 0 },
@@ -146,41 +145,18 @@ provider: { type: String, enum: ["apple", "google", "phone", "email"] },
     bio: { type: String },
     languages: [{ type: String }],
     blockedUsers: [{ type: Schema.Types.ObjectId, ref: 'User' }],
-vibe: {
-  playStyles: {
-    type: String,
-    enum: Object.values(PlayStyle),
-    
-  },
-  pace: {
-    type: String,
-    enum: Object.values(Pace),
-   
-  },
-  courseVibes: {
-    type: String,
-    enum: Object.values(Energy),
-    
-  },
-},
-play: {
-  preferences: {
-    type: String,
-    enum: Object.values(PlayPreference),
-   
-  },
-  mentality: {
-    type: String,
-    enum: Object.values(Mentality),
-    
-  },
-  socialStyle: {
-    type: String,
-    enum: Object.values(SocialStyle),
-    
-  },
-},
-preferredDistance: { type: Number, default: 100 }, 
+    vibe: {
+      playStyles: { type: String },
+      pace: { type: String },
+      courseVibes: { type: String },
+    },
+
+    play: {
+      preferences: { type: String },
+      mentality: { type: String },
+      socialStyle: { type: String },
+    },
+    preferredDistance: { type: Number, default: 100 }, 
     // Boost fields
     boostedUntil: { type: Date, default: null },
     boostsUsedThisMonth: { type: Number, default: 0 },
@@ -200,52 +176,43 @@ preferredDistance: { type: Number, default: 100 },
 
     isIncognito: { type: Boolean, default: false },
 
-
-    //newly added fields
-  moreAboutGender: { type: String },
-  politics: {
-  type: String,
-  enum: Object.values(Politics),
-},
-
-zodiac: {
-  type: String,
-  enum: Object.values(Zodiac),
-},
-
-educationPlan: {
-  type: String,
-  enum: Object.values(EducationPlan
-  ),
-},
-
-communicationStyle: {
-  type: String,
-  enum: Object.values(CommunicationStyle),
-},
-
-loveLanguage: {
-  type: String,
-  enum: Object.values(LoveLanguage),
-},
-
-cannabis: {
-  type: String,
-  enum: Object.values(CannabisUsage),
-},
-
-workout: {
-  type: String,
-  enum: Object.values(Workout),
-},
-petType: {
-  type: String,
-  enum: Object.values(PetType),}
-
-
-    
+    // Newly added fields
+    moreAboutGender: { type: String },
+    politics: {
+      type: String,
+      enum: Object.values(Politics),
+    },
+    zodiac: {
+      type: String,
+      enum: Object.values(Zodiac),
+    },
+    educationPlan: {
+      type: String,
+      enum: Object.values(EducationPlan),
+    },
+    communicationStyle: {
+      type: String,
+      enum: Object.values(CommunicationStyle),
+    },
+    loveLanguage: {
+      type: String,
+      enum: Object.values(LoveLanguage),
+    },
+    cannabis: {
+      type: String,
+      enum: Object.values(CannabisUsage),
+    },
+    workout: {
+      type: String,
+      enum: Object.values(Workout),
+    },
+    petType: {
+      type: String,
+      enum: Object.values(PetType),
+    },
+    trustScore: { type: Number, default: 70 },
+    reportCount: { type: Number, default: 0 },
   },
-
   { timestamps: true }
 );
 

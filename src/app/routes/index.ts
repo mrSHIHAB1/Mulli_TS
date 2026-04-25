@@ -13,6 +13,7 @@ import { notificationRoutes } from "../modules/notification/notification.router"
 import { emailRouter } from "../modules/Waitlist/waitlist.route";
 import { PaymentRoutes } from "../modules/payment/payment.route";
 import { promoCodeRoutes } from "../modules/promoCode/promoCode.routes";
+import { TrustSafetyRoutes } from "../modules/TrustSafetyEngine/trustSafety.routes";
 
 
 const router = express.Router();
@@ -69,6 +70,10 @@ const moduleRoutes = [
   {
     path: "/promo-code",
     route: promoCodeRoutes,
+  },
+  {
+    path: "/trust-safety",
+    route: TrustSafetyRoutes,
   }
   
   

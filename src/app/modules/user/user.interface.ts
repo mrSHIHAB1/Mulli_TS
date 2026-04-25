@@ -43,51 +43,9 @@ export enum ClubhouseBadge {
   LOCAL_LEGEND = "Local Legend",
   RISING_STAR = "Rising Star",
 }
-export enum PlayStyle {
-  COMPETITIVE = "COMPETITIVE",
-  CHILL = "CHILL",
-  JUST_FOR_FUN = "JUST_FOR_FUN",
-  PRACTICE_FOCUSED = "PRACTICE_FOCUSED",
-  SOCIAL_GOLFER = "SOCIAL_GOLFER"
-}
 
-export enum Pace {
-  FAST = "FAST",
-  STEADY = "STEADY",
-  RELAXED = "RELAXED"
-}
 
-export enum Energy {
-  QUIET_FOCUSED = "QUIET_FOCUSED",
-  FRIENDLY_SOCIAL = "FRIENDLY_SOCIAL",
-  MUSIC_VIBES = "MUSIC_VIBES",
-  DRINKS = "DRINKS"
-}
 
-export enum PlayPreference {
-  WALKING = "WALKING",
-  RIDING = "RIDING",
-  NINE_HOLES = "NINE_HOLES",
-  EIGHTEEN_HOLES = "EIGHTEEN_HOLES",
-  SCREEN_GOLF = "SCREEN_GOLF",
-  DRIVING_RANGE = "DRIVING_RANGE",
-  MINI_GOLF = "MINI_GOLF"
-}
-
-export enum Mentality {
-  IMPROVING = "IMPROVING",
-  COMPETITIVE = "COMPETITIVE",
-  CASUAL = "CASUAL",
-  FRIENDLY = "FRIENDLY",
-  EASYGOING = "EASYGOING"
-}
-
-export enum SocialStyle {
-  RANDOM_GROUPS = "RANDOM_GROUPS",
-  CONSISTENT_GROUP = "CONSISTENT_GROUP",
-  ORGANIZED = "ORGANIZED",
-  INVITE_ONLY = "INVITE_ONLY"
-}
 export enum moreAboutGender {
   INTERSEX_MEN = "INTERSEX_MEN",
   TRANSWOMEN = "TRANSWOMEN",
@@ -263,15 +221,15 @@ export interface IUser {
   };
   useLocation?: boolean;
    vibe: {
-    playStyles: PlayStyle;     // multi-select
-    pace: Pace;               // multi-select
-    courseVibes: Energy;  // multi-select
+    playStyles: string;     // multi-select
+    pace: string;               // multi-select
+    courseVibes: string;  // multi-select
   };
 
   play: {
-    preferences: PlayPreference; // walking, 9 holes etc.
-    mentality: Mentality;        // mindset
-    socialStyle: SocialStyle;    // group behavior
+    preferences: string; // walking, 9 holes etc.
+    mentality: string;        // mindset
+    socialStyle: string;    // group behavior
   };
   reciveNotifications?: boolean;
   preferredDistance?:Number;
@@ -320,7 +278,8 @@ loveLanguage?: LoveLanguage;
 cannabis?: CannabisUsage;
 workout?: Workout;
 petType?: PetType;
-
+  trustScore: number;
+  reportCount: number;
 }
 
 

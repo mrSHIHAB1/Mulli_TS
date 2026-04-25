@@ -17,6 +17,7 @@ import { Swipe } from "../Swipe/swipe.model";
 import { Match } from "../Liked/match.model";
 import { sendOtpEmail } from "../../utils/email.util";
 import { Role } from "./user.interface";
+import { TrustSafetyService } from "../TrustSafetyEngine/trustSafety.service";
 
 
 const OTP_EXPIRE = 5 * 60; // 3 minutes
@@ -52,6 +53,10 @@ const createUser = async (data: any): Promise<any> => {
     { ...data, isProfileComplete: true },
     { returnDocument: 'after' }
   );
+
+  if (userData) {
+    await TrustSafetyService.handleProfileCompletion(userData._id);
+  }
 
   if (!userData) {
     throw new Error("User not found for profile completion");
@@ -252,6 +257,14 @@ const blockUserService = async (userId: string, blockedId: string) => {
 
   user.blockedUsers.push(new mongoose.Types.ObjectId(blockedId));
   await user.save();
+
+  // Decrease trust score of the blocked user
+  await TrustSafetyService.updateTrustScore(
+    new mongoose.Types.ObjectId(blockedId),
+    -5,
+    'Blocked by another user'
+  );
+
   return user;
 };
 
@@ -327,6 +340,10 @@ const updateUserProfileService = async (
     { $set: updateData },
     { returnDocument: 'after' }
   );
+
+  if (updatedUser) {
+    await TrustSafetyService.handleProfileCompletion(updatedUser._id);
+  }
 
   if (!updatedUser) {
     throw new Error("User not found");

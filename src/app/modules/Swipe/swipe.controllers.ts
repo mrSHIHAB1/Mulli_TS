@@ -12,7 +12,7 @@ import { Plan } from "../subscription/subscription.interface";
 import Subscription from "../subscription/subscription.model";
 import { chatService } from "../chat/chat.service";
 import { Types } from "mongoose";
-import { time } from "node:console";
+import { VelocityService } from "../TrustSafetyEngine/velocity.service";
 
 const calculateAge = (birthdate: Date): number => {
   const diffMs = Date.now() - new Date(birthdate).getTime();
@@ -99,6 +99,8 @@ export const passUser = catchAsync(async (req: Request, res: Response) => {
   const fromUser = (req as any).user?.id;
   const toUser = req.params.id;
 
+  await VelocityService.checkSwipingVelocity(fromUser);
+
   await Swipe.create({
     fromUser,
     toUser,
@@ -129,6 +131,8 @@ export const likeUser = catchAsync(
           data: null,
         });
       }
+
+      await VelocityService.checkSwipingVelocity(fromUser);
 
       // -------------------------------------------------------------
       // Subscription Check: Unlimited likes for ACE or EAGLE
@@ -290,6 +294,8 @@ export const superLikeUser = catchAsync(
           data: null,
         });
       }
+
+      await VelocityService.checkSwipingVelocity(fromUser);
 
       // -------------------------------------------------------------
       // Subscription Check: 1 free, Birdie 3, Eagle 10, Ace unlimited
