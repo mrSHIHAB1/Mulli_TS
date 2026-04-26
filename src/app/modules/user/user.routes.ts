@@ -26,14 +26,14 @@ router.post("/signup/apple", userControllers.appleLoginController);
 router.post("/admin/login", userControllers.adminlogin);
 
 // Complete User Profile
-router.patch("/profile/complete",fileUploader.upload.array("image", 6),userControllers.createUser);
+router.patch("/profile/complete",fileUploader.upload.array("image", 5),userControllers.createUser);
 
 router.patch("/update-fcm-token",checkAuth(...Object.values(Role)),userControllers.updateFcmToken);
 
 router.post("/block",checkAuth(...Object.values(Role)) ,blockUser);      // Block a user
 router.post("/unblock",checkAuth(...Object.values(Role)), unblockUser);  // Unblock a user
 router.get("/blocked",checkAuth(...Object.values(Role)), getBlockedUsers); // List blocked users
-router.patch("/profile", checkAuth(...Object.values(Role)), userControllers.updateUserProfile);
+router.patch("/profile", checkAuth(...Object.values(Role)), fileUploader.upload.array("image", 5), userControllers.updateUserProfile);
 router.patch("/profile/image", checkAuth(...Object.values(Role)), fileUploader.upload.single("image"), userControllers.updateProfileImages);
 router.post("/profile/boost", checkAuth(...Object.values(Role)), userControllers.activateBoost);
 router.patch("/profile/incognito", checkAuth(...Object.values(Role)), userControllers.toggleIncognitoMode);

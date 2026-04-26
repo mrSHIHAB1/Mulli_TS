@@ -308,16 +308,72 @@ const updateUserProfileService = async (
 ) => {
   const updateData: any = { ...bodyData };
 
-  // Handle profile images
+  // Get current user to fetch existing images
+  const currentUser = await User.findById(userId);
+  let existingImages = [...(currentUser?.images || [])];
+  
+  // Upload new files first if provided
+  let newUrls: string[] = [];
   if (files && files.length > 0) {
     const uploadResults = await Promise.all(
       files.map((f) => fileUploader.uploadToCloudinary(f))
     );
-    const urls = uploadResults
+    newUrls = uploadResults
       .map((r: any) => r?.secure_url)
       .filter(Boolean);
-    updateData.images = urls;
-    updateData.profileImage = urls[0]; // first image as profile
+  }
+
+  // CASE 1: Replace at specific indices
+  if (bodyData.imageIndices && Array.isArray(bodyData.imageIndices) && newUrls.length > 0) {
+    const indices = bodyData.imageIndices as number[];
+    
+    // Find the max index to ensure we expand the array if needed
+    const maxIndex = Math.max(...indices);
+    
+    // Expand array with empty strings if needed
+    while (existingImages.length <= maxIndex) {
+      existingImages.push("");
+    }
+    
+    // Place new URLs at specified indices
+    indices.forEach((index, i) => {
+      if (newUrls[i] && index <= 4) { // Max 5 images (indices 0-4)
+        existingImages[index] = newUrls[i];
+      }
+    });
+    
+    // Remove empty strings and keep only first 5
+    updateData.images = existingImages
+      .filter((img: string) => img !== "") // Remove placeholders
+      .slice(0, 5);
+    delete updateData.imageIndices; // Remove from updateData
+  }
+  // CASE 2: Remove by URL
+  else if (bodyData.imagesToRemove && Array.isArray(bodyData.imagesToRemove)) {
+    existingImages = existingImages.filter(
+      (img: string) => !bodyData.imagesToRemove.includes(img)
+    );
+    
+    // Add new URLs if files were uploaded
+    if (newUrls.length > 0) {
+      existingImages = [...existingImages, ...newUrls];
+    }
+    
+    updateData.images = existingImages.slice(0, 5);
+    delete updateData.imagesToRemove; // Remove from updateData
+  }
+  // CASE 3: Just add new images
+  else if (newUrls.length > 0) {
+    existingImages = [...existingImages, ...newUrls];
+    updateData.images = existingImages.slice(0, 5);
+  }
+
+  // Set profile image (first image in array)
+  if (updateData.images && updateData.images.length > 0) {
+    updateData.profileImage = updateData.images[0];
+  } else if (existingImages.length > 0) {
+    updateData.images = existingImages;
+    updateData.profileImage = existingImages[0];
   }
 
   // Handle nested objects to avoid overwriting the entire field

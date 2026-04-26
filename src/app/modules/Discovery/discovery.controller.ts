@@ -23,22 +23,28 @@ export const getDiscoveryUsers = catchAsync(async (req: Request, res: Response) 
     maxDistance: req.query.maxDistance ? Number(req.query.maxDistance) : undefined,
     skillLevel: req.query.skillLevel as string | undefined,
     hopingToFind: req.query.hopingToFind as string | undefined,
-     // Premium Filters
-      minPhotos: parseNumber(req.query.minPhotos),
-      hasBio: parseBoolean(req.query.hasBio),
+    
+    // Premium Filters (Birdie+)
+    minPhotos: parseNumber(req.query.minPhotos),
+    hasBio: parseBoolean(req.query.hasBio),
+    minHeight: parseNumber(req.query.minHeight),
+    maxHeight: parseNumber(req.query.maxHeight),
 
-      minHeight: parseNumber(req.query.minHeight),
-      maxHeight: parseNumber(req.query.maxHeight),
+    // Top Tier Filters (Ace/Eagle)
+    ethnicity: req.query.ethnicity as string | undefined,
+    politics: req.query.politics as string | undefined,
+    religion: req.query.religion as string | undefined,
+    zodiac: req.query.zodiac as string | undefined,
+    educationPlan: req.query.educationPlan as string | undefined,
+    communicationStyle: req.query.communicationStyle as string | undefined,
+    loveLanguage: req.query.loveLanguage as string | undefined,
+    cannabis: req.query.cannabis as string | undefined,
+    workout: req.query.workout as string | undefined,
+    petType: req.query.petType as string | undefined,
 
-      ethnicity: req.query.ethnicity as string | undefined,
-      politics: req.query.politics as string | undefined,
-      religion: req.query.religion as string | undefined,
-
-      interests: parseArray(req.query.interests),
-      languages: parseArray(req.query.languages),
-
-      openTo: req.query.openTo as string | undefined,
-
+    interests: parseArray(req.query.interests),
+    languages: parseArray(req.query.languages),
+    openTo: req.query.openTo as string | undefined,
   };
 console.log("Discovery filters received:", filters);
   // Pagination

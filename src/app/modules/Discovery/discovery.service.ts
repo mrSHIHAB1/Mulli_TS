@@ -14,16 +14,23 @@ interface Filters {
   minDistance?: number;
   maxDistance?: number;
 
-  // Premium
+  // Premium (Birdie+)
   minPhotos?: number;
   hasBio?: boolean;
-
   minHeight?: number;
   maxHeight?: number;
 
+  // Top Tier (Ace/Eagle)
   ethnicity?: string;
   politics?: string;
   religion?: string;
+  zodiac?: string;
+  educationPlan?: string;
+  communicationStyle?: string;
+  loveLanguage?: string;
+  cannabis?: string;
+  workout?: string;
+  petType?: string;
 
   interests?: string[];
   openTo?: string;
@@ -118,6 +125,13 @@ export const discoveryService = async (
     filters.ethnicity !== undefined ||
     filters.politics !== undefined ||
     filters.religion !== undefined ||
+    filters.zodiac !== undefined ||
+    filters.educationPlan !== undefined ||
+    filters.communicationStyle !== undefined ||
+    filters.loveLanguage !== undefined ||
+    filters.cannabis !== undefined ||
+    filters.workout !== undefined ||
+    filters.petType !== undefined ||
     filters.openTo !== undefined ||
     filters.hopingToFind !== undefined || 
     (filters.interests && filters.interests.length > 0) ||
@@ -158,6 +172,13 @@ export const discoveryService = async (
     if (filters.ethnicity) query.ethnicity = filters.ethnicity;
     if (filters.politics) query.politics = filters.politics;
     if (filters.religion) query.religion = filters.religion;
+    if (filters.zodiac) query.zodiac = filters.zodiac;
+    if (filters.educationPlan) query.educationPlan = filters.educationPlan;
+    if (filters.communicationStyle) query.communicationStyle = filters.communicationStyle;
+    if (filters.loveLanguage) query.loveLanguage = filters.loveLanguage;
+    if (filters.cannabis) query.cannabis = filters.cannabis;
+    if (filters.workout) query.workout = filters.workout;
+    if (filters.petType) query.petType = filters.petType;
     if (filters.openTo) query.openTo = filters.openTo;
     if (filters.hopingToFind) query.hopingToFind = filters.hopingToFind;
 
@@ -289,6 +310,7 @@ export const discoveryService = async (
     religion: u.religion,
     line: u.line,
     handicaprange: u.handicaprange, 
+    zodiac: u.zodiac,
     tcp:"N/A",
     hasMullix: u.subscriptionPlan === Plan.ACE || u.subscriptionPlan === Plan.EAGLE,
     subscriptionType: u.subscriptionPlan || "NONE"
