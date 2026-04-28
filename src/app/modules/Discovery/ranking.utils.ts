@@ -139,12 +139,14 @@ export class NewUserBoost {
   static async getAvailableNewUsers(
     currentUserId: string,
     excludeUserIds: string[] = [],
-    limit: number = 10
+    limit: number = 10,
+    mode: "buddy" | "date" = "buddy"
   ): Promise<any[]> {
     try {
       // Query DiscoveryScore for users still in new user window
       const newUserScores = await DiscoveryScore.find({
         isNewUser: true,
+        mode,
         userId: {
           $ne: currentUserId,
           $nin: excludeUserIds,

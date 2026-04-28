@@ -31,7 +31,7 @@ interface Filters {
   cannabis?: string;
   workout?: string;
   petType?: string;
-
+playstyle?: string;
   interests?: string[];
   openTo?: string;
   languages?: string[];
@@ -178,6 +178,7 @@ export const discoveryService = async (
     if (filters.loveLanguage) query.loveLanguage = filters.loveLanguage;
     if (filters.cannabis) query.cannabis = filters.cannabis;
     if (filters.workout) query.workout = filters.workout;
+    if(filters.playstyle) query.playstyle = filters.playstyle;
     if (filters.petType) query.petType = filters.petType;
     if (filters.openTo) query.openTo = filters.openTo;
     if (filters.hopingToFind) query.hopingToFind = filters.hopingToFind;

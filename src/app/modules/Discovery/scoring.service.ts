@@ -442,8 +442,12 @@ export async function calculateAndUpdateUserScores(
       // Calculate scores
       const bcs = BuddyCompatibilityScoring.calculateBCS(targetUser, user, distanceKm);
       const dcs = DatingCompatibilityScoring.calculateDCS(targetUser, user, distanceKm);
-      const bds = await DesireScoring.calculateBDS(userId);
-      const dds = await DesireScoring.calculateDDS(userId);
+
+      // Calculate desire score components individually so we can store them accurately
+      const matchRate = await DesireScoring.calculateMatchRate(userId);
+      const likeRate = await DesireScoring.calculateLikeRate(userId);
+      const bds = Math.round((matchRate * 0.8) + (likeRate * 0.2));
+      const dds = bds; // same formula for both modes
 
       // Get desire score metrics
       const totalLikesReceived = await Swipe.countDocuments({
@@ -463,8 +467,8 @@ export async function calculateAndUpdateUserScores(
           compatibilityScore: bcs,
           desireScore: bds,
           baseScore: Math.round((bcs * 0.7) + (bds * 0.3)),
-          matchRate: bds,
-          likeRate: (bds * 0.2),
+          matchRate,
+          likeRate,
           totalLikesReceived,
           totalSwipesReceived,
           scoreCalculatedAt: new Date(),
@@ -482,8 +486,8 @@ export async function calculateAndUpdateUserScores(
           compatibilityScore: dcs,
           desireScore: dds,
           baseScore: Math.round((dcs * 0.4) + (dds * 0.6)),
-          matchRate: dds,
-          likeRate: (dds * 0.2),
+          matchRate,
+          likeRate,
           totalLikesReceived,
           totalSwipesReceived,
           scoreCalculatedAt: new Date(),

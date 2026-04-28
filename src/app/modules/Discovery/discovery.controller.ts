@@ -32,6 +32,7 @@ export const getDiscoveryUsers = catchAsync(async (req: Request, res: Response) 
 
     // Top Tier Filters (Ace/Eagle)
     ethnicity: req.query.ethnicity as string | undefined,
+    playstyle: req.query.playstyle as string | undefined,
     politics: req.query.politics as string | undefined,
     religion: req.query.religion as string | undefined,
     zodiac: req.query.zodiac as string | undefined,

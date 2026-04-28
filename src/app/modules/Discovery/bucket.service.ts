@@ -194,18 +194,30 @@ export class BucketCategorization {
     fixed: number;
   }> {
     try {
-      const scores = await DiscoveryScore.find({ mode });
+      // Sort descending so index-based percentile assignment matches recategorizeAllUsers
+      const scores = await DiscoveryScore.find({ mode }).sort({ baseScore: -1 });
+      const total = scores.length;
+      const aCount = Math.ceil(total * 0.3);
+      const bCount = Math.ceil(total * 0.4);
 
       let processed = 0;
       let fixed = 0;
 
-      for (const score of scores) {
+      for (let i = 0; i < scores.length; i++) {
         processed++;
-        const correctBucket = this.assignBucket(score.baseScore);
 
-        if (score.bucket !== correctBucket) {
+        let correctBucket: BucketType;
+        if (i < aCount) {
+          correctBucket = "A";
+        } else if (i < aCount + bCount) {
+          correctBucket = "B";
+        } else {
+          correctBucket = "C";
+        }
+
+        if (scores[i].bucket !== correctBucket) {
           fixed++;
-          await DiscoveryScore.findByIdAndUpdate(score._id, {
+          await DiscoveryScore.findByIdAndUpdate(scores[i]._id, {
             bucket: correctBucket,
             lastUpdatedAt: new Date(),
           });

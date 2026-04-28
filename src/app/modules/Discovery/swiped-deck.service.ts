@@ -51,6 +51,9 @@ interface UserWithScore {
   interests?: string[];
   languages?: string[];
   openTo?: string;
+  line?: string;
+  handicaprange?: string;
+  zodiac?: string;
   subscriptionType?: string; // User's subscription tier (for visibility filtering)
 }
 
@@ -159,7 +162,8 @@ export class SwipeDeckService {
       const newUsers = await NewUserBoost.getAvailableNewUsers(
         authUserId,
         excludedIdStrings,
-        5
+        5,
+        mode
       );
 
       console.log(`[Discovery Debug] New users available: ${newUsers.length}`);
@@ -353,6 +357,9 @@ export class SwipeDeckService {
           interests: user.interests,
           languages: user.languages,
           openTo: user.openTo,
+          line: user.line,
+          handicaprange: user.handicaprange,
+          zodiac: user.zodiac,
           subscriptionType,
         });
       } catch (error) {
